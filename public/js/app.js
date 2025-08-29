@@ -162,7 +162,7 @@ class KindleCoverAnalyzer {
 
     async loadCategories() {
         try {
-            const response = await fetch(`${this.apiBase}/scraper/categories`);
+            const response = await fetch('/api/categories');
             const data = await response.json();
             
             const categorySelect = document.getElementById('category');
