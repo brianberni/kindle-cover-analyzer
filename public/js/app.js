@@ -162,8 +162,14 @@ class KindleCoverAnalyzer {
 
     async loadCategories() {
         try {
-            const response = await fetch('/api/categories');
-            const data = await response.json();
+            // For now, use local categories since deployment is having issues
+            const data = {
+                categories: [
+                    'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
+                    'young-adult', 'literary-fiction', 'contemporary-fiction',
+                    'historical-fiction', 'horror', 'business'
+                ]
+            };
             
             const categorySelect = document.getElementById('category');
             if (!categorySelect) return;
