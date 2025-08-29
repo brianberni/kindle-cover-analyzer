@@ -285,8 +285,10 @@ class KindleCoverAnalyzer {
 
         try {
             // Step 1: Scrape books
+            console.log(`Scraping books for category: ${category}`);
             const scrapeResponse = await fetch(`${this.apiBase}/scraper/books/${category}?limit=${limit}`);
             const scrapeData = await scrapeResponse.json();
+            console.log('Scrape response:', scrapeData);
 
             if (!scrapeResponse.ok) {
                 throw new Error(scrapeData.error || 'Failed to scrape books');
@@ -320,7 +322,8 @@ class KindleCoverAnalyzer {
             this.displayResults(analysisData, category);
 
         } catch (error) {
-            this.showError(error.message);
+            console.error('Analysis failed:', error);
+            this.showError(`Analysis failed: ${error.message}`);
         } finally {
             this.hideLoading();
         }
