@@ -130,7 +130,7 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout for heavy Amazon pages
     
     const response = await fetch('https://realtime.oxylabs.io/v1/queries', {
       method: 'POST',
@@ -206,7 +206,17 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
     throw new Error(`No usable results in Oxylabs response`);
     
   } catch (fetchError) {
-    console.error('Fetch error:', fetchError);
+    console.error('Fetch error details:', {
+      name: fetchError.name,
+      message: fetchError.message,
+      cause: fetchError.cause,
+      stack: fetchError.stack
+    });
+    
+    if (fetchError.name === 'AbortError') {
+      throw new Error(`Oxylabs request timed out after 35 seconds - Amazon page may be taking too long to scrape`);
+    }
+    
     throw new Error(`Network error calling Oxylabs: ${fetchError.message}`);
   }
 }

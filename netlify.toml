@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "18"
 
+[functions]
+  timeout = 40
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
