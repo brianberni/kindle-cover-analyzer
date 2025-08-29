@@ -113,24 +113,27 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
     throw new Error('Oxylabs credentials not configured in environment variables');
   }
 
-  // Target Amazon Kindle bestsellers page for the specific category
+  // Try Amazon search instead of bestsellers for faster response
+  const searchQuery = `kindle ebooks ${category.replace('-', ' ')} bestsellers`;
   const payload = {
-    source: 'amazon_bestsellers',
+    source: 'amazon_search',
     domain: 'com',
-    parse: true, // Get structured data
+    query: searchQuery,
+    parse: true,
     context: [
       { key: 'category_id', value: categoryInfo.id },
+      { key: 'results_language', value: 'en' },
       { key: 'amazon_domain', value: 'amazon.com' }
     ]
   };
   
-  console.log(`Targeting Kindle bestsellers for category: ${categoryInfo.name} (ID: ${categoryInfo.id})`);
+  console.log(`Searching Amazon for: "${searchQuery}" in category: ${categoryInfo.name} (ID: ${categoryInfo.id})`);
 
   console.log('Making Oxylabs request:', JSON.stringify(payload, null, 2));
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout for heavy Amazon pages
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for Amazon search
     
     const response = await fetch('https://realtime.oxylabs.io/v1/queries', {
       method: 'POST',
@@ -214,7 +217,7 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
     });
     
     if (fetchError.name === 'AbortError') {
-      throw new Error(`Oxylabs request timed out after 35 seconds - Amazon page may be taking too long to scrape`);
+      throw new Error(`Oxylabs request timed out after 30 seconds - Amazon search may be taking too long to complete`);
     }
     
     throw new Error(`Network error calling Oxylabs: ${fetchError.message}`);
