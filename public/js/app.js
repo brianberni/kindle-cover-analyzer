@@ -343,6 +343,13 @@ class KindleCoverAnalyzer {
     }
 
     displayTrends(trends) {
+        console.log('displayTrends called with:', trends); // Debug log
+        
+        if (!trends) {
+            console.error('Trends is undefined');
+            return;
+        }
+        
         // Original trends
         this.displayOriginalTrends(trends);
         
