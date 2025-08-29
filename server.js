@@ -32,6 +32,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Kindle Cover Analyzer running on http://localhost:${PORT}`);
-});
+// Only start server if running locally
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Kindle Cover Analyzer running on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel
+export default app;
