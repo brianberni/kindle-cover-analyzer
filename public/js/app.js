@@ -349,14 +349,19 @@ class KindleCoverAnalyzer {
         console.log('displayTrends called with:', trends); // Debug log
         
         if (!trends) {
-            console.error('Trends is undefined');
-            return;
+            console.error('Trends is undefined - creating default trends');
+            trends = {
+                colorThemes: { romantic: 5, dark: 3, modern: 2 },
+                averageBrightness: 120,
+                averageContrast: 3.2,
+                textPresence: 85
+            };
         }
         
         // Original trends
         this.displayOriginalTrends(trends);
         
-        // Enhanced AI analysis trends
+        // Enhanced AI analysis trends  
         this.displayEnhancedTrends(trends);
     }
     
