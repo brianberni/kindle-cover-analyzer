@@ -41,12 +41,12 @@ export async function handler(event, context) {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Try Oxylabs with timeout
+    // Try Oxylabs with extended timeout
     console.log('Attempting Oxylabs scraping...');
     const books = await Promise.race([
       scrapeWithOxylabs(category, categoryInfo, limit),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Oxylabs timeout after 15 seconds')), 15000)
+        setTimeout(() => reject(new Error('Oxylabs timeout after 25 seconds')), 25000)
       )
     ]);
     
@@ -76,8 +76,9 @@ export async function handler(event, context) {
         category,
         count: realisticBooks.length,
         books: realisticBooks,
-        note: `Using realistic demo data - Oxylabs failed`,
+        note: `Using realistic demo data - Oxylabs failed: ${error.message}`,
         errorDetails: error.message,
+        errorStack: error.stack?.substring(0, 300),
         debug: {
           timestamp: new Date().toISOString(),
           category: category,
@@ -126,7 +127,7 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
     
     const response = await fetch('https://realtime.oxylabs.io/v1/queries', {
       method: 'POST',
