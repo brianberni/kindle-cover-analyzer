@@ -1,5 +1,3 @@
-import KindleScraper from '../../src/scrapers/kindle-scraper.js';
-
 export async function handler(event, context) {
   // Enable CORS
   const headers = {
@@ -13,26 +11,16 @@ export async function handler(event, context) {
   }
 
   try {
-    console.log('Categories function called');
-    const scraper = new KindleScraper();
-    console.log('Scraper created, getting categories');
-    const categories = scraper.getAvailableCategories();
-    console.log('Categories retrieved:', categories);
+    console.log('Categories function called - using hardcoded categories for now');
     
-    // Ensure we have categories
-    if (!categories || categories.length === 0) {
-      const fallbackCategories = [
-        'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
-        'young-adult', 'literary-fiction', 'contemporary-fiction',
-        'historical-fiction', 'horror', 'business'
-      ];
-      console.log('Using fallback categories');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ categories: fallbackCategories })
-      };
-    }
+    // Just return hardcoded categories until we resolve the import issue
+    const categories = [
+      'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
+      'young-adult', 'literary-fiction', 'contemporary-fiction',
+      'historical-fiction', 'horror', 'business'
+    ];
+    
+    console.log('Returning categories:', categories);
     
     return {
       statusCode: 200,
@@ -42,16 +30,10 @@ export async function handler(event, context) {
     
   } catch (error) {
     console.error('Categories function error:', error);
-    // Return fallback categories on error
-    const fallbackCategories = [
-      'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
-      'young-adult', 'literary-fiction', 'contemporary-fiction',
-      'historical-fiction', 'horror', 'business'
-    ];
     return {
-      statusCode: 200,
+      statusCode: 500,
       headers,
-      body: JSON.stringify({ categories: fallbackCategories })
+      body: JSON.stringify({ error: error.message })
     };
   }
 }
