@@ -1,5 +1,4 @@
-// Import axios for better HTTP handling (like the working local version)
-import axios from 'axios';
+// Use fetch with proper authentication like the working local version
 
 export async function handler(event, context) {
   // Enable CORS
@@ -160,18 +159,32 @@ async function makeOxylabsRequest(category, oxylabsAuth) {
 
   console.log('Oxylabs request payload:', JSON.stringify(payload, null, 2));
 
-  const config = {
-    method: 'post',
-    url: 'https://realtime.oxylabs.io/v1/queries',
-    auth: oxylabsAuth,  // This is the key difference - using axios auth instead of manual headers
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    data: JSON.stringify(payload),
-    timeout: 30000  // 30 second timeout
-  };
+  // Create proper Basic Auth header like axios does internally
+  const credentials = `${oxylabsAuth.username}:${oxylabsAuth.password}`;
+  const encodedCredentials = btoa(credentials);
 
-  return await axios(config);
+  const response = await fetch('https://realtime.oxylabs.io/v1/queries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${encodedCredentials}`  // Proper Basic Auth
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.log('Oxylabs error response:', errorText);
+    throw new Error(`Oxylabs API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  // Return in axios-like format for compatibility
+  return {
+    status: response.status,
+    data: data
+  };
 }
 
 function getCategoryQuery(category) {
