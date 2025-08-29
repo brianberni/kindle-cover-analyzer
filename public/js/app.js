@@ -311,6 +311,12 @@ class KindleCoverAnalyzer {
                 throw new Error(analysisData.error || 'Failed to analyze covers');
             }
 
+            console.log('Analysis data received:', analysisData); // Debug log
+            
+            if (!analysisData || !analysisData.trends || !analysisData.analyses) {
+                throw new Error('Invalid analysis response format');
+            }
+
             this.displayResults(analysisData, category);
 
         } catch (error) {
@@ -347,7 +353,7 @@ class KindleCoverAnalyzer {
     displayOriginalTrends(trends) {
         // Color themes
         const colorThemesEl = document.getElementById('colorThemes');
-        if (colorThemesEl) {
+        if (colorThemesEl && trends && trends.colorThemes) {
             colorThemesEl.innerHTML = '';
             
             Object.entries(trends.colorThemes)
