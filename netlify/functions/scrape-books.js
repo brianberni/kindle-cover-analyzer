@@ -16,7 +16,7 @@ export async function handler(event, context) {
     const category = event.queryStringParameters?.category || 'romance';
     const limit = parseInt(event.queryStringParameters?.limit) || 20;
     
-    console.log(`Scraping Amazon Kindle ${category} category with limit ${limit}... (using working local implementation)`);
+    console.log(`NEW CODE RUNNING: Scraping Amazon Kindle ${category} category with limit ${limit}... (using working local implementation)`);
     
     // Check credentials first
     const hasCredentials = !!(process.env.OXYLABS_USERNAME && process.env.OXYLABS_PASSWORD);
