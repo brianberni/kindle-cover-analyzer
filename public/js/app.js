@@ -366,19 +366,30 @@ class KindleCoverAnalyzer {
     }
     
     displayOriginalTrends(trends) {
-        // Color themes
-        const colorThemesEl = document.getElementById('colorThemes');
-        if (colorThemesEl && trends && trends.colorThemes) {
-            colorThemesEl.innerHTML = '';
-            
-            Object.entries(trends.colorThemes)
-                .sort(([,a], [,b]) => b - a)
-                .forEach(([theme, count]) => {
-                    const div = document.createElement('div');
-                    div.className = 'color-theme';
-                    div.textContent = `${theme}: ${count}`;
-                    colorThemesEl.appendChild(div);
+        try {
+            // Color themes
+            const colorThemesEl = document.getElementById('colorThemes');
+            if (colorThemesEl && trends && trends.colorThemes) {
+                colorThemesEl.innerHTML = '';
+                
+                Object.entries(trends.colorThemes)
+                    .sort(([,a], [,b]) => b - a)
+                    .forEach(([theme, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'color-theme';
+                        div.textContent = `${theme}: ${count}`;
+                        colorThemesEl.appendChild(div);
+                    });
+            } else {
+                console.log('colorThemes element or trends missing:', {
+                    element: !!colorThemesEl,
+                    trends: !!trends,
+                    colorThemes: trends ? !!trends.colorThemes : 'trends is null'
                 });
+            }
+        } catch (error) {
+            console.error('Error in displayOriginalTrends:', error);
+            console.error('Trends object:', trends);
         }
 
         // Metrics
