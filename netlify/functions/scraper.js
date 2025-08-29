@@ -3,7 +3,7 @@ import KindleScraper from '../../src/scrapers/kindle-scraper.js';
 const scraper = new KindleScraper();
 
 export async function handler(event, context) {
-  const { httpMethod, path, queryStringParameters, body } = event;
+  const { httpMethod, queryStringParameters, body } = event;
   
   // Enable CORS
   const headers = {
@@ -17,34 +17,18 @@ export async function handler(event, context) {
   }
 
   try {
-    if (path.endsWith('/categories')) {
-      const categories = scraper.getAvailableCategories();
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ categories })
-      };
-    }
+    console.log('Netlify function called:', event);
     
-    if (path.includes('/books/')) {
-      const category = path.split('/books/')[1];
-      const limit = parseInt(queryStringParameters?.limit) || 20;
-      
-      const books = await scraper.scrapeCategory(category, limit);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ category, count: books.length, books })
-      };
-    }
-    
+    // For now, just return categories since that's what's being requested
+    const categories = scraper.getAvailableCategories();
     return {
-      statusCode: 404,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ error: 'Not found' })
+      body: JSON.stringify({ categories })
     };
     
   } catch (error) {
+    console.error('Netlify function error:', error);
     return {
       statusCode: 500,
       headers,
