@@ -162,12 +162,24 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
     // Handle structured parsed data from bestsellers
     if (data.results && data.results[0]) {
       const result = data.results[0];
+      console.log('=== OXYLABS RESPONSE DEBUG ===');
+      console.log('Result keys:', Object.keys(result));
+      console.log('Content type:', typeof result.content);
+      console.log('Content keys:', result.content ? Object.keys(result.content) : 'No content');
+      
+      // Log first few characters of content for debugging
+      if (typeof result.content === 'string') {
+        console.log('Content preview:', result.content.substring(0, 500));
+      } else if (result.content && typeof result.content === 'object') {
+        console.log('Content structure:', JSON.stringify(result.content, null, 2).substring(0, 1000));
+      }
       
       // Check for bestsellers structured data
       if (result.content && result.content.bestsellers) {
         console.log('Found bestsellers data from Oxylabs');
         const bestsellers = result.content.bestsellers;
         console.log(`Processing ${bestsellers.length} bestseller results`);
+        console.log('First bestseller:', JSON.stringify(bestsellers[0], null, 2));
         return parseBestsellerData(bestsellers, limit);
       }
       
@@ -176,6 +188,7 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
         console.log('Found parsed organic results from Oxylabs');
         const organicResults = result.content.results.organic;
         console.log(`Processing ${organicResults.length} organic results`);
+        console.log('First organic result:', JSON.stringify(organicResults[0], null, 2));
         return parseOxylabsStructuredData(organicResults, limit);
       }
       
@@ -186,8 +199,8 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
       }
       
       // Debug what we actually got
-      console.log('Unexpected response structure. Content keys:', 
-        result.content ? Object.keys(result.content) : 'No content');
+      console.log('=== NO MATCHING PARSER FOUND ===');
+      console.log('Content keys:', result.content ? Object.keys(result.content) : 'No content');
     }
 
     throw new Error(`No usable results in Oxylabs response`);
