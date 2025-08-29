@@ -63,6 +63,9 @@ export async function handler(event, context) {
     };
     
   } catch (error) {
+    const category = event.queryStringParameters?.category || 'romance';
+    const limit = parseInt(event.queryStringParameters?.limit) || 20;
+    
     console.error('Real scraping error:', error.message);
     console.error('Full error details:', error);
     
