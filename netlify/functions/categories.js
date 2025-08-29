@@ -1,3 +1,5 @@
+import KindleScraper from '../../src/scrapers/kindle-scraper.js';
+
 export async function handler(event, context) {
   // Enable CORS
   const headers = {
@@ -11,19 +13,8 @@ export async function handler(event, context) {
   }
 
   try {
-    // Simple hardcoded categories for now
-    const categories = [
-      'romance',
-      'mystery-thriller', 
-      'science-fiction',
-      'fantasy',
-      'young-adult',
-      'literary-fiction',
-      'contemporary-fiction',
-      'historical-fiction',
-      'horror',
-      'business'
-    ];
+    const scraper = new KindleScraper();
+    const categories = scraper.getAvailableCategories();
     
     return {
       statusCode: 200,

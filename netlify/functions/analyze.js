@@ -1,3 +1,5 @@
+import EnhancedCoverAnalyzer from '../../src/analysis/enhanced-analyzer.js';
+
 export async function handler(event, context) {
   // Enable CORS
   const headers = {
@@ -22,26 +24,13 @@ export async function handler(event, context) {
       };
     }
 
-    // Sample analysis data
-    const analyses = books.map(book => ({
-      book: book,
-      analysis: {
-        colorTheme: ['romantic', 'dark', 'modern', 'warm'][Math.floor(Math.random() * 4)],
-        dominantColors: ['#ff69b4', '#1a1a1a', '#0066cc'][Math.floor(Math.random() * 3)],
-        brightness: Math.random() * 255,
-        contrast: Math.random() * 5,
-        textDetection: { hasText: Math.random() > 0.3 },
-        dimensions: { aspectRatio: '0.67' }
-      }
-    }));
-
-    const trends = {
-      colorThemes: { romantic: 3, dark: 2, modern: 2, warm: 1 },
-      averageBrightness: 150,
-      averageContrast: 3.2,
-      aspectRatios: { '0.67': 8 },
-      textPresence: 75
-    };
+    console.log(`Analyzing ${books.length} book covers`);
+    
+    const analyzer = new EnhancedCoverAnalyzer();
+    const analyses = await analyzer.analyzeCovers(books);
+    
+    // Generate trends summary
+    const trends = generateTrends(analyses);
     
     return {
       statusCode: 200,
@@ -61,4 +50,47 @@ export async function handler(event, context) {
       body: JSON.stringify({ error: error.message })
     };
   }
+}
+
+function generateTrends(analyses) {
+  const trends = {
+    colorThemes: {},
+    averageBrightness: 0,
+    averageContrast: 0,
+    aspectRatios: {},
+    textPresence: 0
+  };
+  
+  let validAnalyses = analyses.filter(a => a.analysis && !a.analysis.error);
+  
+  if (validAnalyses.length === 0) {
+    return trends;
+  }
+  
+  // Count color themes
+  validAnalyses.forEach(analysis => {
+    const theme = analysis.analysis.colorTheme;
+    trends.colorThemes[theme] = (trends.colorThemes[theme] || 0) + 1;
+  });
+  
+  // Calculate averages
+  const totalBrightness = validAnalyses.reduce((sum, a) => sum + (a.analysis.brightness || 0), 0);
+  trends.averageBrightness = Math.round(totalBrightness / validAnalyses.length);
+  
+  const totalContrast = validAnalyses.reduce((sum, a) => sum + (a.analysis.contrast || 0), 0);
+  trends.averageContrast = Math.round((totalContrast / validAnalyses.length) * 100) / 100;
+  
+  // Count aspect ratios
+  validAnalyses.forEach(analysis => {
+    const ratio = analysis.analysis.dimensions?.aspectRatio;
+    if (ratio) {
+      trends.aspectRatios[ratio] = (trends.aspectRatios[ratio] || 0) + 1;
+    }
+  });
+  
+  // Calculate text presence percentage
+  const withText = validAnalyses.filter(a => a.analysis.textDetection?.hasText).length;
+  trends.textPresence = Math.round((withText / validAnalyses.length) * 100);
+  
+  return trends;
 }

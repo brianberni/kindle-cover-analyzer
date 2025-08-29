@@ -1,3 +1,5 @@
+import KindleScraper from '../../src/scrapers/kindle-scraper.js';
+
 export async function handler(event, context) {
   // Enable CORS
   const headers = {
@@ -11,41 +13,21 @@ export async function handler(event, context) {
   }
 
   try {
-    // For now, return sample book data since scraping is complex to set up
     const category = event.queryStringParameters?.category || 'romance';
     const limit = parseInt(event.queryStringParameters?.limit) || 20;
     
-    const sampleBooks = [
-      {
-        title: "Sample Romance Novel",
-        author: "Jane Doe", 
-        image: "https://via.placeholder.com/300x400/ff69b4/ffffff?text=Romance",
-        price: "$3.99",
-        rank: 1
-      },
-      {
-        title: "Mystery Thriller Book",
-        author: "John Smith",
-        image: "https://via.placeholder.com/300x400/1a1a1a/ffffff?text=Mystery", 
-        price: "$4.99",
-        rank: 2
-      },
-      {
-        title: "Sci-Fi Adventure",
-        author: "Alex Johnson",
-        image: "https://via.placeholder.com/300x400/0066cc/ffffff?text=SciFi",
-        price: "$2.99", 
-        rank: 3
-      }
-    ];
+    console.log(`Scraping ${category} with limit ${limit}`);
+    
+    const scraper = new KindleScraper();
+    const books = await scraper.scrapeCategory(category, limit);
     
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
         category,
-        count: sampleBooks.length,
-        books: sampleBooks 
+        count: books.length,
+        books: books 
       })
     };
     
