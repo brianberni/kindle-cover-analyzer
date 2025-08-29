@@ -290,7 +290,7 @@ class KindleCoverAnalyzer {
         try {
             // Step 1: Scrape books
             console.log(`Scraping books for category: ${category}`);
-            const scrapeResponse = await fetch(`${this.apiBase}/scraper/books/${category}?limit=${limit}`);
+            const scrapeResponse = await fetch(`${this.apiBase}/books?category=${category}&limit=${limit}`);
             const scrapeData = await scrapeResponse.json();
             console.log('Scrape response:', scrapeData);
 
