@@ -64,7 +64,7 @@ export async function handler(event, context) {
     
   } catch (error) {
     console.error('Real scraping error:', error.message);
-    console.error('Error details:', error);
+    console.error('Full error details:', error);
     
     // Generate realistic demo data with actual book cover images
     const realisticBooks = generateRealisticBooks(category, limit);
@@ -76,11 +76,17 @@ export async function handler(event, context) {
         category,
         count: realisticBooks.length,
         books: realisticBooks,
-        note: `Fallback to realistic demo data - Error: ${error.message}`,
+        note: `Using realistic demo data - Oxylabs failed`,
+        errorDetails: error.message,
         debug: {
+          timestamp: new Date().toISOString(),
+          category: category,
           hasCredentials: !!(process.env.OXYLABS_USERNAME && process.env.OXYLABS_PASSWORD),
-          username: process.env.OXYLABS_USERNAME ? 'Present' : 'Missing',
-          password: process.env.OXYLABS_PASSWORD ? 'Present' : 'Missing'
+          usernamePresent: !!process.env.OXYLABS_USERNAME,
+          passwordPresent: !!process.env.OXYLABS_PASSWORD,
+          usernameLength: process.env.OXYLABS_USERNAME?.length || 0,
+          errorType: error.constructor.name,
+          stackTrace: error.stack?.substring(0, 500)
         }
       })
     };
