@@ -303,7 +303,7 @@ class KindleCoverAnalyzer {
             }
 
             // Step 2: Analyze covers
-            const analysisResponse = await fetch(`${this.apiBase}/analysis/analyze`, {
+            const analysisResponse = await fetch(`${this.apiBase}/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
