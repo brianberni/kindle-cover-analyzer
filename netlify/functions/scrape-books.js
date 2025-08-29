@@ -16,22 +16,49 @@ export async function handler(event, context) {
     
     console.log(`Real scraping for ${category} with limit ${limit}`);
     
+    // Check credentials first
+    const hasCredentials = !!(process.env.OXYLABS_USERNAME && process.env.OXYLABS_PASSWORD);
+    console.log('Credentials available:', hasCredentials);
+    
+    if (!hasCredentials) {
+      console.log('No Oxylabs credentials, using realistic demo data');
+      const realisticBooks = generateRealisticBooks(category, limit);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          category,
+          count: realisticBooks.length,
+          books: realisticBooks,
+          note: 'Using demo data - Oxylabs credentials not configured'
+        })
+      };
+    }
+    
     // Get category info
     const categoryInfo = getCategoryInfo(category);
     if (!categoryInfo) {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Make Oxylabs request
-    const books = await scrapeWithOxylabs(category, categoryInfo, limit);
+    // Try Oxylabs with timeout
+    console.log('Attempting Oxylabs scraping...');
+    const books = await Promise.race([
+      scrapeWithOxylabs(category, categoryInfo, limit),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Oxylabs timeout after 15 seconds')), 15000)
+      )
+    ]);
     
+    console.log(`Successfully scraped ${books.length} real books`);
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
         category,
         count: books.length,
-        books: books 
+        books: books,
+        note: 'Real Amazon data via Oxylabs'
       })
     };
     
@@ -88,6 +115,9 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
   console.log('Making Oxylabs request:', JSON.stringify(payload, null, 2));
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 second timeout
+    
     const response = await fetch('https://realtime.oxylabs.io/v1/queries', {
       method: 'POST',
       headers: {
@@ -95,8 +125,10 @@ async function scrapeWithOxylabs(category, categoryInfo, limit) {
         'Authorization': 'Basic ' + btoa(`${oxylabsAuth.username}:${oxylabsAuth.password}`)
       },
       body: JSON.stringify(payload),
-      timeout: 30000 // 30 second timeout
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     console.log('Oxylabs response status:', response.status, response.statusText);
     
