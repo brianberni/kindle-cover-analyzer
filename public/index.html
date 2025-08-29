@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindle Cover Analyzer - Professional Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="logo-text">Cover Analyzer</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <span class="nav-section-title">Main</span>
+                    <ul class="nav-list">
+                        <li class="nav-item active" data-view="dashboard">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" data-view="analyze">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-search"></i>
+                                <span>Quick Analyze</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <span class="nav-section-title">Categories</span>
+                    <ul class="nav-list">
+                        <li class="nav-item nav-has-submenu">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-heart"></i>
+                                <span>Romance</span>
+                                <i class="fas fa-chevron-right nav-chevron"></i>
+                            </a>
+                            <ul class="nav-submenu">
+                                <li><a href="#" data-category="romance">Contemporary</a></li>
+                                <li><a href="#" data-category="historical-romance">Historical</a></li>
+                                <li><a href="#" data-category="paranormal-romance">Paranormal</a></li>
+                                <li><a href="#" data-category="romantic-suspense">Suspense</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item nav-has-submenu">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-mask"></i>
+                                <span>Mystery</span>
+                                <i class="fas fa-chevron-right nav-chevron"></i>
+                            </a>
+                            <ul class="nav-submenu">
+                                <li><a href="#" data-category="mystery">Mystery</a></li>
+                                <li><a href="#" data-category="thriller">Thriller</a></li>
+                                <li><a href="#" data-category="cozy-mystery">Cozy Mystery</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item nav-has-submenu">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-rocket"></i>
+                                <span>Sci-Fi & Fantasy</span>
+                                <i class="fas fa-chevron-right nav-chevron"></i>
+                            </a>
+                            <ul class="nav-submenu">
+                                <li><a href="#" data-category="science-fiction">Science Fiction</a></li>
+                                <li><a href="#" data-category="fantasy">Fantasy</a></li>
+                                <li><a href="#" data-category="dystopian">Dystopian</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <span class="nav-section-title">Tools</span>
+                    <ul class="nav-list">
+                        <li class="nav-item" data-view="analytics">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Analytics</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" data-view="settings">
+                            <a href="#" class="nav-link">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header Bar -->
+            <header class="header-bar">
+                <div class="header-left">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="breadcrumb">
+                        <span class="breadcrumb-item active" id="breadcrumbCurrent">Dashboard</span>
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <div class="header-search">
+                        <input type="text" placeholder="Search genres..." class="search-input">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <button class="header-btn">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                    <button class="header-btn">
+                        <i class="fas fa-share-alt"></i>
+                        <span>Share</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Views -->
+            <main class="content-area">
+                <!-- Dashboard Overview -->
+                <div class="view-container active" id="dashboardView">
+                    <div class="dashboard-header">
+                        <h1>Cover Analysis Dashboard</h1>
+                        <p>Analyze trending book covers with AI-powered insights</p>
+                    </div>
+
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Total Analyses</h3>
+                                <div class="stat-number">1,247</div>
+                                <div class="stat-change positive">+12% this week</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-palette"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Color Trends</h3>
+                                <div class="stat-number">89</div>
+                                <div class="stat-change positive">+5 new trends</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Bestsellers</h3>
+                                <div class="stat-number">342</div>
+                                <div class="stat-change positive">+23 this month</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>AI Insights</h3>
+                                <div class="stat-number">156</div>
+                                <div class="stat-change neutral">Processing...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-cards">
+                        <div class="dashboard-card quick-actions">
+                            <div class="card-header">
+                                <h3>Quick Actions</h3>
+                            </div>
+                            <div class="card-content">
+                                <button class="action-btn primary" id="quickAnalyzeBtn">
+                                    <i class="fas fa-zap"></i>
+                                    <span>Start New Analysis</span>
+                                </button>
+                                <button class="action-btn secondary">
+                                    <i class="fas fa-history"></i>
+                                    <span>View Recent</span>
+                                </button>
+                                <button class="action-btn secondary">
+                                    <i class="fas fa-star"></i>
+                                    <span>Trending Now</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card trending-insights">
+                            <div class="card-header">
+                                <h3>Trending Insights</h3>
+                                <span class="card-badge">AI Powered</span>
+                            </div>
+                            <div class="card-content">
+                                <div class="insight-item">
+                                    <div class="insight-icon">🎨</div>
+                                    <div class="insight-content">
+                                        <h4>Dark Themes Rising</h4>
+                                        <p>35% increase in dark cover designs</p>
+                                    </div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-icon">✨</div>
+                                    <div class="insight-content">
+                                        <h4>Minimalist Typography</h4>
+                                        <p>Clean fonts outperforming ornate designs</p>
+                                    </div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-icon">💫</div>
+                                    <div class="insight-content">
+                                        <h4>Gradient Popularity</h4>
+                                        <p>Subtle gradients showing 67% higher engagement</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis View -->
+                <div class="view-container" id="analyzeView">
+                    <div class="analysis-header">
+                        <h1>Cover Analysis</h1>
+                        <p>Select parameters and analyze cover trends</p>
+                    </div>
+
+                    <div class="analysis-controls">
+                        <div class="control-group">
+                            <label>Genre Category</label>
+                            <select id="category" class="form-control">
+                                <option value="">Select a genre...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Number of Books</label>
+                            <select id="limit" class="form-control">
+                                <option value="10">10 books</option>
+                                <option value="20" selected>20 books</option>
+                                <option value="30">30 books</option>
+                                <option value="50">50 books</option>
+                            </select>
+                        </div>
+
+                        <button id="analyzeBtn" class="btn-analyze">
+                            <i class="fas fa-play"></i>
+                            <span>Start Analysis</span>
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loading" class="loading-container hidden">
+                        <div class="loading-content">
+                            <div class="loading-spinner"></div>
+                            <h3>Analyzing Covers</h3>
+                            <p>Scraping bestsellers and running AI analysis...</p>
+                            <div class="loading-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill"></div>
+                                </div>
+                                <span class="progress-text">Processing...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="results" class="results-container hidden">
+                        <div class="results-header">
+                            <h2>Analysis Results</h2>
+                            <div class="results-actions">
+                                <button class="btn-secondary">
+                                    <i class="fas fa-download"></i>
+                                    Export Data
+                                </button>
+                                <button class="btn-secondary">
+                                    <i class="fas fa-share-alt"></i>
+                                    Share Results
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Trends Summary -->
+                        <div class="trends-dashboard">
+                            <div class="trends-section">
+                                <h3>Core Metrics</h3>
+                                <div class="metrics-grid">
+                                    <div class="metric-card">
+                                        <h4>Color Themes</h4>
+                                        <div id="colorThemes" class="color-themes"></div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <h4>Average Brightness</h4>
+                                        <div id="brightness" class="metric-value"></div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <h4>Average Contrast</h4>
+                                        <div id="contrast" class="metric-value"></div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <h4>Text Presence</h4>
+                                        <div id="textPresence" class="metric-value"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- AI Insights -->
+                            <div class="trends-section">
+                                <h3>🤖 AI-Powered Insights</h3>
+                                <div class="ai-insights-grid">
+                                    <div class="ai-insight-card">
+                                        <div id="objectTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="typographyTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="compositionTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="genreTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="artisticStyleTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="emotionalTrends"></div>
+                                    </div>
+                                    <div class="ai-insight-card">
+                                        <div id="marketTrends"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Individual Covers -->
+                        <div class="covers-section">
+                            <div class="section-header">
+                                <h3>Individual Cover Analysis</h3>
+                                <div class="view-options">
+                                    <button class="view-toggle active" data-view="grid">
+                                        <i class="fas fa-th"></i>
+                                    </button>
+                                    <button class="view-toggle" data-view="list">
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="coversGrid" class="covers-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="error" class="error-container hidden">
+                        <div class="error-content">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Analysis Failed</h3>
+                            <p id="errorMessage"></p>
+                            <button class="btn-primary" onclick="location.reload()">
+                                <i class="fas fa-refresh"></i>
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

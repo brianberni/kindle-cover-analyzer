@@ -1,0 +1,27 @@
+{
+  "name": "kindle-cover-analyzer",
+  "version": "1.0.0",
+  "description": "Analyze trending book covers from Amazon Kindle bestsellers",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "sharp": "^0.33.0",
+    "node-vibrant": "^3.1.6",
+    "node-fetch": "^3.3.2",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["kindle", "book-covers", "design-analysis", "web-scraping"],
+  "author": "",
+  "license": "MIT"
+}
