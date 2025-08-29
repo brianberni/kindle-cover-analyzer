@@ -13,8 +13,26 @@ export async function handler(event, context) {
   }
 
   try {
+    console.log('Categories function called');
     const scraper = new KindleScraper();
+    console.log('Scraper created, getting categories');
     const categories = scraper.getAvailableCategories();
+    console.log('Categories retrieved:', categories);
+    
+    // Ensure we have categories
+    if (!categories || categories.length === 0) {
+      const fallbackCategories = [
+        'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
+        'young-adult', 'literary-fiction', 'contemporary-fiction',
+        'historical-fiction', 'horror', 'business'
+      ];
+      console.log('Using fallback categories');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ categories: fallbackCategories })
+      };
+    }
     
     return {
       statusCode: 200,
@@ -24,10 +42,16 @@ export async function handler(event, context) {
     
   } catch (error) {
     console.error('Categories function error:', error);
+    // Return fallback categories on error
+    const fallbackCategories = [
+      'romance', 'mystery-thriller', 'science-fiction', 'fantasy',
+      'young-adult', 'literary-fiction', 'contemporary-fiction',
+      'historical-fiction', 'horror', 'business'
+    ];
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ categories: fallbackCategories })
     };
   }
 }
