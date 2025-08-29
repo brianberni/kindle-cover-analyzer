@@ -273,15 +273,19 @@ class KindleCoverAnalyzer {
     }
 
     async analyzeCovers() {
-        const category = document.getElementById('category').value;
-        const limit = document.getElementById('limit').value;
+        try {
+            console.log('analyzeCovers called - start');
+            const category = document.getElementById('category').value;
+            const limit = document.getElementById('limit').value;
 
-        if (!category) {
-            this.showError('Please select a category');
-            return;
-        }
-
-        this.showLoading();
+            if (!category) {
+                this.showError('Please select a category');
+                return;
+            }
+            
+            console.log('About to show loading');
+            this.showLoading();
+            console.log('Loading shown, proceeding with analysis');
 
         try {
             // Step 1: Scrape books
@@ -325,6 +329,11 @@ class KindleCoverAnalyzer {
             console.error('Analysis failed:', error);
             this.showError(`Analysis failed: ${error.message}`);
         } finally {
+            this.hideLoading();
+        }
+        } catch (outerError) {
+            console.error('Outer error in analyzeCovers:', outerError);
+            this.showError(`Analyze error: ${outerError.message}`);
             this.hideLoading();
         }
     }
