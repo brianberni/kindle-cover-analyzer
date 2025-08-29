@@ -32,12 +32,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Only start server if running locally
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`🚀 Kindle Cover Analyzer running on http://localhost:${PORT}`);
-  });
-}
+// Start server (works for both local and production)
+app.listen(PORT, () => {
+  console.log(`🚀 Kindle Cover Analyzer running on port ${PORT}`);
+});
 
 // Export for Vercel
 export default app;
