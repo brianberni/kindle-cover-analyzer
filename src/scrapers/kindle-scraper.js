@@ -295,46 +295,27 @@ class KindleScraper {
       throw new Error('Oxylabs credentials not configured');
     }
 
-    // Try direct bestseller URL first, then fall back to search
-    const categoryInfo = this.categories[category];
-    let payload;
+    // Use Amazon search with very specific queries for better results
+    payload = {
+      source: 'amazon_search',
+      query: this.getCategoryQuery(category),
+      domain: 'com',
+      start_page: 1,
+      pages: 1,
+      parse: true,
+      context: [
+        {
+          key: 'sort_by',
+          value: 'price_low_to_high' // Try different sort to get varied results
+        },
+        {
+          key: 'currency',
+          value: 'USD'
+        }
+      ]
+    };
     
-    if (categoryInfo && categoryInfo.id) {
-      // Approach 1: Direct Amazon bestseller page URL
-      payload = {
-        source: 'amazon',
-        url: `https://www.amazon.com/gp/bestsellers/digital-text/${categoryInfo.id}`,
-        parse: true,
-        context: [
-          {
-            key: 'currency',
-            value: 'USD'
-          }
-        ]
-      };
-      console.log(`Using direct bestseller URL for ${category}: ${payload.url}`);
-    } else {
-      // Approach 2: Search query (fallback)
-      payload = {
-        source: 'amazon_search',
-        query: this.getCategoryQuery(category),
-        domain: 'com',
-        start_page: 1,
-        pages: 1,
-        parse: true,
-        context: [
-          {
-            key: 'sort_by',
-            value: 'featured'
-          },
-          {
-            key: 'currency',
-            value: 'USD'
-          }
-        ]
-      };
-      console.log(`Using search query for ${category}: ${payload.query}`);
-    }
+    console.log(`Oxylabs search for ${category}: "${payload.query}"`);
 
     console.log('Oxylabs request (following documentation):', JSON.stringify(payload, null, 2));
 
@@ -396,7 +377,7 @@ class KindleScraper {
       'scottish-romance': 'kindle scottish romance bestsellers',
       'viking-romance': 'kindle viking romance bestsellers',
       'american-historical-romance': 'kindle american historical romance bestsellers',
-      'romantic-suspense': 'kindle romantic suspense romance thriller bestsellers',
+      'romantic-suspense': 'romantic suspense kindle ebook',
       'sports-romance': 'kindle sports romance bestsellers',
       'new-adult-romance': 'kindle new adult romance bestsellers',
       'holiday-romance': 'kindle holiday romance bestsellers',
@@ -539,7 +520,7 @@ class KindleScraper {
         });
         
         // ONLY accept books with real Amazon images - no placeholders!
-        if (title && imageUrl && imageUrl.includes('amazon')) {
+        if (title && imageUrl && (imageUrl.includes('amazon') || imageUrl.includes('ssl-images-amazon') || imageUrl.includes('m.media-amazon'))) {
           books.push({
             rank: index + 1,
             title: title.trim(),
