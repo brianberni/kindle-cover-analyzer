@@ -149,16 +149,16 @@ class KindleScraper {
         }
         
         if (books.length > 0) {
-          console.log(`Successfully scraped ${books.length} books from ${category}`);
+          console.log(`✅ Successfully scraped ${books.length} REAL Amazon books from ${category}`);
           return books;
         } else {
-          console.log(`No books found in response, falling back to demo data`);
-          return this.generateRealisticDemoBooks(category, limit);
+          console.log(`❌ No real Amazon books found - Oxylabs may not be working properly`);
+          throw new Error(`No real Amazon books found for ${category}. Check Oxylabs connection.`);
         }
       } else {
-        console.log(`Invalid response structure, falling back to demo data`);
+        console.log(`❌ Invalid response structure from Oxylabs`);
         console.log('Response data:', JSON.stringify(response.data, null, 2));
-        return this.generateRealisticDemoBooks(category, limit);
+        throw new Error(`Invalid Oxylabs response for ${category}. No real Amazon data available.`);
       }
     } catch (error) {
       console.error(`Scraping failed:`, error.response?.data || error.message);
@@ -169,8 +169,8 @@ class KindleScraper {
         console.error(`Use this Job ID when contacting Oxylabs support about Amazon URL restrictions`);
       }
       
-      console.log(`Falling back to demo data for ${category}`);
-      return this.generateRealisticDemoBooks(category, limit);
+      console.log(`❌ Oxylabs failed for ${category} - NO FALLBACK TO DEMO DATA`);
+      throw error; // Re-throw - we want ONLY real Amazon data
     }
   }
 
@@ -538,13 +538,13 @@ class KindleScraper {
           trendingScore
         });
         
-        // Accept books even without images for now - we'll use placeholders
-        if (title) {
+        // ONLY accept books with real Amazon images - no placeholders!
+        if (title && imageUrl && imageUrl.includes('amazon')) {
           books.push({
             rank: index + 1,
-            title: title ? title.trim() : '',
+            title: title.trim(),
             author: author ? author.trim() : '',
-            coverUrl: imageUrl ? this.getHighResImage(imageUrl) : `https://picsum.photos/300/400?random=${index + 1}`,
+            coverUrl: this.getHighResImage(imageUrl),
             price: price,
             rating: rating ? `${rating} out of 5 stars` : '',
             amazonUrl: url,
@@ -556,6 +556,9 @@ class KindleScraper {
             absr,
             trendingScore
           });
+          console.log(`✅ Added book with real Amazon image: ${title}`);
+        } else {
+          console.log(`❌ Skipped book - missing image or not Amazon: ${title}`);
         }
       } catch (error) {
         console.error('Error parsing search result item:', error);

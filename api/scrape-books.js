@@ -41,12 +41,13 @@ export default async function handler(req, res) {
     const transformedBooks = books.map((book, index) => {
       let imageUrl = book.coverUrl;
       
-      // If we have a real Amazon image URL, proxy it to avoid CORS issues
+      // ONLY use real Amazon images - proxy them to avoid CORS
       if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com'))) {
         imageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
-      } else if (!imageUrl) {
-        // Fallback to placeholder only if no image at all
-        imageUrl = `https://via.placeholder.com/300x400/666666/ffffff?text=${encodeURIComponent(book.title?.substring(0, 20) || 'Book')}`;
+      } else {
+        console.error(`❌ Book has no valid Amazon image: ${book.title}`);
+        // Don't include books without real Amazon images
+        return null;
       }
       
       return {
@@ -64,9 +65,10 @@ export default async function handler(req, res) {
         isBestSeller: book.isBestSeller,
         trendingScore: book.trendingScore
       };
-    });
+    }).filter(book => book !== null); // Remove books without valid Amazon images
     
     console.log('Sample transformed book:', transformedBooks[0]);
+    console.log(`✅ Returning ${transformedBooks.length} books with REAL Amazon images`);
     
     console.log(`Successfully scraped ${transformedBooks.length} books from ${category}`);
     
