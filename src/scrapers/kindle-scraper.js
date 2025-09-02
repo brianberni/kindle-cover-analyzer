@@ -296,7 +296,7 @@ class KindleScraper {
     }
 
     // Use Amazon search with very specific queries for better results
-    payload = {
+    const payload = {
       source: 'amazon_search',
       query: this.getCategoryQuery(category),
       domain: 'com',
