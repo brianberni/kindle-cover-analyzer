@@ -138,16 +138,15 @@ class KindleScraper {
         // Handle structured data from parse: true
         let books = [];
         
-        if (result.content && Array.isArray(result.content)) {
-          // amazon_bestsellers returns an array of bestseller items directly
-          console.log('Using parsed results from amazon_bestsellers');
-          console.log(`Found ${result.content.length} bestseller results`);
-          books = this.parseAmazonBestsellerResults(result.content, limit);
-        } else if (result.content && result.content.results && result.content.results.organic) {
-          // Fallback to amazon_search format if needed
-          console.log('Using parsed results from amazon_search fallback');
-          console.log(`Found ${result.content.results.organic.length} organic results`);
+        if (result.content && result.content.results && result.content.results.organic) {
+          // Standard amazon_search response format
+          console.log('Using parsed results from amazon_search');
+          console.log(`Found ${result.content.results.organic.length} search results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
+        } else if (result.content && result.content.products) {
+          // Alternative products array format
+          console.log('Found products array, parsing as search results');
+          books = this.parseAmazonSearchResults(result.content.products, limit);
         } else {
           console.log('Unexpected response format');
           console.log('Response content keys:', Object.keys(result.content || {}));
@@ -306,47 +305,30 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Try amazon_bestsellers first, fallback to amazon_search if it fails
-    try {
-      const payload = {
-        source: 'amazon_bestsellers',
-        domain: 'com',
-        query: categoryInfo.id, // Use category ID directly
-        start_page: 1,
-        parse: true
-      };
-      
-      console.log(`Oxylabs bestsellers for ${category} (ID: ${payload.query}):`);
-      console.log('Oxylabs request (following documentation):', JSON.stringify(payload, null, 2));
-      
-      return await this.makeHttpRequest(payload);
-    } catch (bestsellerError) {
-      console.warn(`❌ amazon_bestsellers failed for ${category}:`, bestsellerError.message);
-      console.log('🔄 Falling back to amazon_search approach...');
-      
-      // Fallback to search approach
-      const searchPayload = {
-        source: 'amazon_search',
-        query: this.getCategoryQuery(category),
-        domain: 'com',
-        start_page: 1,
-        pages: 1,
-        parse: true,
-        context: [
-          {
-            key: 'sort_by',
-            value: 'featured' // Amazon's featured results = bestsellers
-          },
-          {
-            key: 'currency',
-            value: 'USD'
-          }
-        ]
-      };
-      
-      console.log(`Oxylabs search fallback for ${category}: "${searchPayload.query}"`);
-      return await this.makeHttpRequest(searchPayload);
-    }
+    // Use improved search approach with bestseller-focused queries
+    const payload = {
+      source: 'amazon_search',
+      query: this.getCategoryQuery(category),
+      domain: 'com',
+      start_page: 1,
+      pages: 1,
+      parse: true,
+      context: [
+        {
+          key: 'sort_by',
+          value: 'featured' // Amazon's featured results prioritize bestsellers
+        },
+        {
+          key: 'currency', 
+          value: 'USD'
+        }
+      ]
+    };
+    
+    console.log(`Oxylabs search for ${category}: "${payload.query}"`);
+    console.log('Oxylabs request:', JSON.stringify(payload, null, 2));
+    
+    return await this.makeHttpRequest(payload);
   }
 
   async makeHttpRequest(payload) {
@@ -384,7 +366,7 @@ class KindleScraper {
       'scottish-romance': 'kindle scottish romance bestsellers',
       'viking-romance': 'kindle viking romance bestsellers',
       'american-historical-romance': 'kindle american historical romance bestsellers',
-      'romantic-suspense': 'kindle romantic suspense bestsellers',
+      'romantic-suspense': 'romantic suspense kindle books bestseller',
       'sports-romance': 'kindle sports romance bestsellers',
       'new-adult-romance': 'kindle new adult romance bestsellers',
       'holiday-romance': 'kindle holiday romance bestsellers',
