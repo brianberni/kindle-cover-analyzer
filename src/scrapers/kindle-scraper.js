@@ -143,11 +143,6 @@ class KindleScraper {
           console.log('Using parsed results from amazon_search');
           console.log(`Found ${result.content.results.organic.length} organic results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
-        } else if (result.content && result.content.bestsellers) {
-          // Direct bestseller page response
-          console.log('Using bestseller page results');
-          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
-          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
         } else {
           console.log('Unexpected response format');
           console.log('Response content keys:', Object.keys(result.content || {}));
@@ -305,46 +300,25 @@ class KindleScraper {
       throw new Error('Oxylabs credentials not configured');
     }
 
-    // Try direct bestseller page first for correct ranking order
-    const categoryInfo = this.categories[category];
-    let payload;
-    
-    if (categoryInfo && categoryInfo.id) {
-      // Approach 1: Direct bestseller page (correct order)
-      payload = {
-        source: 'amazon',
-        url: `https://www.amazon.com/gp/bestsellers/digital-text/${categoryInfo.id}`,
-        parse: true,
-        context: [
-          {
-            key: 'currency',
-            value: 'USD'
-          }
-        ]
-      };
-      console.log(`Using direct bestseller URL for correct ranking: ${payload.url}`);
-    } else {
-      // Approach 2: Search with bestseller sorting
-      payload = {
-        source: 'amazon_search',
-        query: this.getCategoryQuery(category),
-        domain: 'com',
-        start_page: 1,
-        pages: 1,
-        parse: true,
-        context: [
-          {
-            key: 'sort_by',
-            value: 'featured' // Amazon's featured = bestsellers
-          },
-          {
-            key: 'currency',
-            value: 'USD'
-          }
-        ]
-      };
-      console.log(`Using search query for ${category}: ${payload.query}`);
-    }
+    // Use Amazon search with bestseller-focused query and sorting
+    const payload = {
+      source: 'amazon_search',
+      query: this.getCategoryQuery(category),
+      domain: 'com',
+      start_page: 1,
+      pages: 1,
+      parse: true,
+      context: [
+        {
+          key: 'sort_by',
+          value: 'featured' // Amazon's featured results = bestsellers
+        },
+        {
+          key: 'currency',
+          value: 'USD'
+        }
+      ]
+    };
     
     console.log(`Oxylabs search for ${category}: "${payload.query}"`);
 
@@ -408,7 +382,7 @@ class KindleScraper {
       'scottish-romance': 'kindle scottish romance bestsellers',
       'viking-romance': 'kindle viking romance bestsellers',
       'american-historical-romance': 'kindle american historical romance bestsellers',
-      'romantic-suspense': 'romantic suspense kindle ebook',
+      'romantic-suspense': 'kindle romantic suspense bestsellers',
       'sports-romance': 'kindle sports romance bestsellers',
       'new-adult-romance': 'kindle new adult romance bestsellers',
       'holiday-romance': 'kindle holiday romance bestsellers',
@@ -589,6 +563,9 @@ class KindleScraper {
           salesVolume,
           searchPosition: index + 1
         });
+        
+        // Boost score for items that appear early in search results (likely bestsellers)
+        const bestsellerBoost = Math.max(0, 20 - (index * 2));
 
         // Try to extract ABSR (Amazon Best Sellers Rank) if available
         const absr = item.best_sellers_rank || item.sales_rank || item.rank || null;
@@ -634,13 +611,9 @@ class KindleScraper {
       }
     });
     
-    // Sort books by trending score (highest first) to show most trending covers
-    books.sort((a, b) => b.trendingScore - a.trendingScore);
-    
-    // Re-rank after sorting
-    books.forEach((book, index) => {
-      book.rank = index + 1;
-    });
+    // Keep Amazon's search result order for bestsellers - don't re-sort
+    // Amazon's "featured" sort already gives us bestseller order
+    console.log(`✅ Keeping Amazon's bestseller order for ${books.length} books`);
     
     return books;
   }
