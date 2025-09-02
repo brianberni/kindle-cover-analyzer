@@ -638,7 +638,9 @@ class KindleCoverAnalyzer {
         const colors = analysis.colors || {};
 
         card.innerHTML = `
-            <img src="${book.coverUrl}" alt="${book.title}" class="cover-image" onerror="this.style.display='none'">
+            <img src="${book.coverUrl}" alt="${book.title}" class="cover-image" 
+                 onerror="console.error('Image failed to load:', '${book.coverUrl}'); this.src='https://via.placeholder.com/300x400/cccccc/666666?text=Cover+Not+Available';"
+                 onload="console.log('Image loaded successfully:', '${book.coverUrl}')">
             <div class="cover-info">
                 <div class="cover-rank">Rank #${book.rank}</div>
                 <div class="cover-title">${book.title}</div>

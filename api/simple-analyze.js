@@ -47,6 +47,7 @@ export default async function handler(req, res) {
         title: book.title,
         author: book.author,
         imageUrl: book.imageUrl,
+        coverUrl: book.coverUrl || book.imageUrl, // Frontend expects coverUrl
         rank: book.rank,
         price: book.price,
         rating: book.rating,

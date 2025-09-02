@@ -41,7 +41,8 @@ export default async function handler(req, res) {
     const transformedBooks = books.map((book, index) => ({
       title: book.title,
       author: book.author,
-      imageUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`, // Ensure we always have an image
+      imageUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`,
+      coverUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`, // Frontend expects coverUrl
       rank: book.rank,
       price: book.price,
       rating: book.rating,
