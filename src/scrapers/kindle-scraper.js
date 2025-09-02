@@ -468,16 +468,26 @@ class KindleScraper {
       try {
         // Extract data from amazon_search structured response
         const title = item.title || '';
-        const author = item.manufacturer || item.author || item.author_name || '';
-        const price = item.price ? `$${item.price}` : '';
+        const author = item.manufacturer || item.author || item.author_name || item.brand || '';
+        const price = item.price ? `$${item.price}` : item.price_str || '';
         const rating = item.rating || '';
-        const imageUrl = item.url_image || item.image || item.image_url || '';
-        const url = item.url || '';
+        
+        // Try multiple possible image field names from Oxylabs
+        const imageUrl = item.url_image || 
+                         item.image || 
+                         item.image_url || 
+                         item.thumbnail || 
+                         item.img_url ||
+                         item.cover_image ||
+                         item.product_image ||
+                         '';
+        
+        const url = item.url || item.link || '';
         const asin = item.asin || '';
-        const reviewsCount = item.reviews_count || 0;
+        const reviewsCount = item.reviews_count || item.review_count || 0;
         const salesVolume = item.sales_volume || '';
-        const isBestSeller = item.best_seller || false;
-        const isAmazonsChoice = item.is_amazons_choice || false;
+        const isBestSeller = item.best_seller || item.is_bestseller || false;
+        const isAmazonsChoice = item.is_amazons_choice || item.amazons_choice || false;
         const pricingCount = item.pricing_count || 0;
         
         // Calculate trending score for better ranking
@@ -498,6 +508,7 @@ class KindleScraper {
           author,
           price,
           hasImage: !!imageUrl,
+          imageUrl: imageUrl ? imageUrl.substring(0, 60) + '...' : 'NO IMAGE',
           reviewsCount,
           rating,
           isBestSeller,

@@ -69,6 +69,31 @@ export default async function handler(req, res) {
           jobId: response.data?.job_id || null
         };
 
+        // If we have results, let's examine the structure for images
+        if (response.data?.results?.[0]?.content) {
+          const content = response.data.results[0].content;
+          debugInfo.contentStructure = {
+            keys: Object.keys(content),
+            hasResults: !!content.results,
+            resultsKeys: content.results ? Object.keys(content.results) : null
+          };
+
+          if (content.results?.organic && content.results.organic.length > 0) {
+            const firstOrganic = content.results.organic[0];
+            debugInfo.sampleOrganic = {
+              keys: Object.keys(firstOrganic),
+              title: firstOrganic.title?.substring(0, 50) + '...' || 'No title',
+              hasImage: !!firstOrganic.url_image || !!firstOrganic.image || !!firstOrganic.thumbnail,
+              imageFields: {
+                url_image: firstOrganic.url_image ? 'FOUND' : 'missing',
+                image: firstOrganic.image ? 'FOUND' : 'missing', 
+                thumbnail: firstOrganic.thumbnail ? 'FOUND' : 'missing',
+                img_url: firstOrganic.img_url ? 'FOUND' : 'missing'
+              }
+            };
+          }
+        }
+
         console.log('Oxylabs response:', debugInfo.oxylabsTest);
 
       } catch (oxylabsError) {
