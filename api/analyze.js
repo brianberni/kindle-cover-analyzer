@@ -41,28 +41,36 @@ export default async function handler(req, res) {
       console.error('Real analysis failed, using fallback:', analysisError.message);
       
       // Fallback to mock analysis if real analysis fails
-      analyses = books.map(book => ({
-        title: book.title,
-        author: book.author,
-        imageUrl: book.imageUrl,
-        analysis: {
-          colorTheme: ['dark', 'warm', 'cool', 'romantic', 'mysterious'][Math.floor(Math.random() * 5)],
-          brightness: Math.floor(Math.random() * 255),
-          contrast: Math.random() * 5,
-          dominantColors: [
-            { color: '#1a237e', percentage: 35 },
-            { color: '#ffffff', percentage: 25 },
-            { color: '#ffb74d', percentage: 20 }
-          ],
-          textDetection: {
-            hasText: Math.random() > 0.2,
-            confidence: Math.random()
-          },
-          dimensions: {
-            aspectRatio: '0.67'
+      console.log('Creating fallback analysis for books:', books.map(b => b.title));
+      analyses = books.map((book, index) => {
+        const colorTheme = ['dark', 'warm', 'cool', 'romantic', 'mysterious'][Math.floor(Math.random() * 5)];
+        const brightness = Math.floor(Math.random() * 200) + 55; // 55-255
+        const contrast = Math.random() * 4 + 1; // 1-5
+        
+        return {
+          title: book.title,
+          author: book.author,
+          imageUrl: book.imageUrl,
+          rank: book.rank,
+          price: book.price,
+          rating: book.rating,
+          analysis: {
+            colorTheme,
+            brightness,
+            contrast,
+            dominantColors: generateRandomColors(colorTheme),
+            textDetection: {
+              hasText: Math.random() > 0.2,
+              confidence: Math.random() * 0.5 + 0.5 // 0.5-1.0
+            },
+            dimensions: {
+              aspectRatio: '0.67',
+              width: 300,
+              height: 400
+            }
           }
-        }
-      }));
+        };
+      });
     }
     
     console.log(`Successfully analyzed ${analyses.length} covers`);
@@ -168,4 +176,22 @@ function generateTrends(analyses) {
   // For now, adding basic trend analysis
   
   return trends;
+}
+
+function generateRandomColors(colorTheme) {
+  const colorPalettes = {
+    dark: ['#1a1a1a', '#2d2d2d', '#333333', '#666666'],
+    warm: ['#ff6b35', '#f7931e', '#ffd23f', '#ffab40'],
+    cool: ['#4ecdc4', '#44a08d', '#096dd9', '#40a9ff'],
+    romantic: ['#ff1744', '#e91e63', '#9c27b0', '#f06292'],
+    mysterious: ['#37474f', '#455a64', '#546e7a', '#78909c']
+  };
+  
+  const colors = colorPalettes[colorTheme] || colorPalettes.dark;
+  const shuffled = colors.sort(() => 0.5 - Math.random()).slice(0, 3);
+  
+  return shuffled.map((color, index) => ({
+    color,
+    percentage: index === 0 ? 35 : index === 1 ? 25 : 20
+  }));
 }

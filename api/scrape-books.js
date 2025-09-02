@@ -23,6 +23,9 @@ export default async function handler(req, res) {
     }
 
     console.log(`Scraping ${limit} books for category: ${category}`);
+    console.log('Environment variables check:');
+    console.log('OXYLABS_USERNAME:', process.env.OXYLABS_USERNAME ? 'SET' : 'NOT SET');
+    console.log('OXYLABS_PASSWORD:', process.env.OXYLABS_PASSWORD ? 'SET' : 'NOT SET');
     
     // Load and use the real Kindle scraper
     const KindleScraper = await loadKindleScraper();
@@ -31,11 +34,14 @@ export default async function handler(req, res) {
     // This will use real Oxylabs scraping or fall back to demo data if scraping fails
     const books = await scraper.scrapeCategory(category, parseInt(limit));
     
+    console.log('Scraping result - first book:', books[0]);
+    console.log('Is this real Amazon data?', books[0]?.amazonUrl ? 'YES' : 'NO (demo data)');
+    
     // Transform the data to match expected frontend format
-    const transformedBooks = books.map(book => ({
+    const transformedBooks = books.map((book, index) => ({
       title: book.title,
       author: book.author,
-      imageUrl: book.coverUrl,
+      imageUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`, // Ensure we always have an image
       rank: book.rank,
       price: book.price,
       rating: book.rating,
@@ -46,6 +52,8 @@ export default async function handler(req, res) {
       isBestSeller: book.isBestSeller,
       trendingScore: book.trendingScore
     }));
+    
+    console.log('Sample transformed book:', transformedBooks[0]);
     
     console.log(`Successfully scraped ${transformedBooks.length} books from ${category}`);
     

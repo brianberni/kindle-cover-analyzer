@@ -175,80 +175,65 @@ class KindleScraper {
   }
 
   generateRealisticDemoBooks(category, limit) {
-    // Using placeholder images that work reliably for demo purposes
-    const sampleBooks = {
+    // Enhanced demo books with better cover URLs and more categories
+    const baseBooks = this.getGenericBooks(category);
+    const books = [];
+    
+    for (let i = 0; i < Math.min(limit, 20); i++) {
+      const baseIndex = i % baseBooks.length;
+      const book = baseBooks[baseIndex];
+      
+      books.push({
+        rank: i + 1,
+        title: `${book.title}${i > baseBooks.length - 1 ? ` (${Math.floor(i/baseBooks.length) + 1})` : ''}`,
+        author: book.author,
+        coverUrl: `https://picsum.photos/300/400?random=${Date.now() + i}`, // Unique images
+        price: book.price,
+        rating: book.rating,
+        reviewsCount: Math.floor(Math.random() * 10000) + 100,
+        isBestSeller: i < 5, // Top 5 are bestsellers
+        trendingScore: 100 - (i * 2) // Decreasing score by rank
+      });
+    }
+    
+    console.log(`Generated ${books.length} demo books for ${category}`);
+    return books;
+  }
+
+  getGenericBooks(category) {
+    const bookTemplates = {
       'romance': [
-        {
-          rank: 1,
-          title: "It Ends with Us",
-          author: "Colleen Hoover",
-          coverUrl: "https://picsum.photos/300/400?random=1",
-          price: "$16.99",
-          rating: "4.4 out of 5 stars"
-        },
-        {
-          rank: 2,
-          title: "Book Lovers", 
-          author: "Emily Henry",
-          coverUrl: "https://picsum.photos/300/400?random=2",
-          price: "$14.99",
-          rating: "4.2 out of 5 stars"
-        },
-        {
-          rank: 3,
-          title: "The Seven Husbands of Evelyn Hugo",
-          author: "Taylor Jenkins Reid", 
-          coverUrl: "https://picsum.photos/300/400?random=3",
-          price: "$15.99",
-          rating: "4.6 out of 5 stars"
-        },
-        {
-          rank: 4,
-          title: "The Love Hypothesis",
-          author: "Ali Hazelwood",
-          coverUrl: "https://picsum.photos/300/400?random=4",
-          price: "$12.99",
-          rating: "4.3 out of 5 stars"
-        },
-        {
-          rank: 5,
-          title: "Beach Read",
-          author: "Emily Henry",
-          coverUrl: "https://picsum.photos/300/400?random=5",
-          price: "$13.99",
-          rating: "4.1 out of 5 stars"
-        }
+        { title: "Hearts Entwined", author: "Sarah Mitchell", price: "$14.99", rating: "4.5 out of 5 stars" },
+        { title: "Love's Promise", author: "Emma Thompson", price: "$12.99", rating: "4.2 out of 5 stars" },
+        { title: "Forever Yours", author: "Jessica Parker", price: "$13.99", rating: "4.4 out of 5 stars" },
+        { title: "Passionate Dreams", author: "Rachel Stone", price: "$15.99", rating: "4.3 out of 5 stars" },
+        { title: "Summer Romance", author: "Claire Davis", price: "$11.99", rating: "4.1 out of 5 stars" }
       ],
       'mystery-thriller': [
-        {
-          rank: 1,
-          title: "The Thursday Murder Club",
-          author: "Richard Osman",
-          coverUrl: "https://picsum.photos/300/400?random=6", 
-          price: "$15.99",
-          rating: "4.5 out of 5 stars"
-        },
-        {
-          rank: 2,
-          title: "Gone Girl",
-          author: "Gillian Flynn",
-          coverUrl: "https://picsum.photos/300/400?random=7",
-          price: "$14.99", 
-          rating: "4.0 out of 5 stars"
-        },
-        {
-          rank: 3,
-          title: "The Girl with the Dragon Tattoo",
-          author: "Stieg Larsson",
-          coverUrl: "https://picsum.photos/300/400?random=8",
-          price: "$16.99",
-          rating: "4.2 out of 5 stars"
-        }
+        { title: "The Silent Witness", author: "David Black", price: "$16.99", rating: "4.4 out of 5 stars" },
+        { title: "Murder at Midnight", author: "Helen Cross", price: "$15.99", rating: "4.3 out of 5 stars" },
+        { title: "The Last Clue", author: "Michael Grey", price: "$14.99", rating: "4.5 out of 5 stars" },
+        { title: "Dark Secrets", author: "Anna White", price: "$13.99", rating: "4.2 out of 5 stars" },
+        { title: "The Missing Hour", author: "Tom Rivers", price: "$17.99", rating: "4.6 out of 5 stars" }
+      ],
+      'science-fiction': [
+        { title: "Galactic Empire", author: "Alex Nova", price: "$18.99", rating: "4.4 out of 5 stars" },
+        { title: "Mars Colony Alpha", author: "Luna Sterling", price: "$16.99", rating: "4.3 out of 5 stars" },
+        { title: "The Time Paradox", author: "Jack Cosmic", price: "$15.99", rating: "4.5 out of 5 stars" },
+        { title: "Robot Revolution", author: "Cyra Tech", price: "$14.99", rating: "4.2 out of 5 stars" },
+        { title: "Quantum Dreams", author: "Nova Star", price: "$17.99", rating: "4.6 out of 5 stars" }
+      ],
+      'fantasy': [
+        { title: "Dragon's Crown", author: "Aria Mystical", price: "$16.99", rating: "4.5 out of 5 stars" },
+        { title: "The Enchanted Realm", author: "Elven Moon", price: "$15.99", rating: "4.3 out of 5 stars" },
+        { title: "Sword of Legends", author: "Magnus Storm", price: "$17.99", rating: "4.4 out of 5 stars" },
+        { title: "The Magic Within", author: "Crystal Sage", price: "$14.99", rating: "4.2 out of 5 stars" },
+        { title: "Kingdom of Shadows", author: "Dark Phoenix", price: "$18.99", rating: "4.6 out of 5 stars" }
       ]
     };
-
-    const books = sampleBooks[category] || sampleBooks['romance'];
-    return books.slice(0, Math.min(limit, books.length));
+    
+    // Return books for the category, or default to romance
+    return bookTemplates[category] || bookTemplates['romance'];
   }
 
   generateDemoBooks(category, limit) {
@@ -304,28 +289,70 @@ class KindleScraper {
   }
 
   async makeOxylabsRequest(category) {
-    // Use correct amazon_search source - ONLY query, domain, parse per Oxylabs instruction
-    const payload = {
-      source: 'amazon_search',
-      query: this.getCategoryQuery(category),
-      domain: 'com',
-      parse: true,
-      sort_by: 'relevance'  // Try to get most relevant bestsellers
-    };
+    // Check if we have valid credentials
+    if (!this.oxylabsAuth.username || !this.oxylabsAuth.password) {
+      console.log('Missing Oxylabs credentials, using demo data');
+      throw new Error('Oxylabs credentials not configured');
+    }
 
-    console.log('Oxylabs request payload:', JSON.stringify(payload, null, 2));
-
-    const config = {
-      method: 'post',
-      url: 'https://realtime.oxylabs.io/v1/queries',
-      auth: this.oxylabsAuth,
-      headers: {
-        'Content-Type': 'application/json'
+    // Try different approaches to get Amazon Kindle bestseller data
+    const attempts = [
+      // Approach 1: Direct bestseller URL
+      {
+        source: 'amazon',
+        url: `https://www.amazon.com/gp/bestsellers/digital-text/${this.categories[category]?.id || '158566011'}/ref=zg_bs_nav_digital-text_1`,
+        parse: true
       },
-      data: JSON.stringify(payload)
-    };
+      // Approach 2: Search query with specific sorting
+      {
+        source: 'amazon_search',
+        query: this.getCategoryQuery(category),
+        domain: 'com',
+        parse: true,
+        sort_by: 'relevance'
+      },
+      // Approach 3: Alternative search approach
+      {
+        source: 'amazon_search',
+        query: `kindle ${category.replace(/-/g, ' ')} bestsellers`,
+        domain: 'com',
+        parse: true
+      }
+    ];
 
-    return await axios(config);
+    for (let i = 0; i < attempts.length; i++) {
+      const payload = attempts[i];
+      console.log(`Oxylabs attempt ${i + 1}:`, JSON.stringify(payload, null, 2));
+
+      try {
+        const config = {
+          method: 'post',
+          url: 'https://realtime.oxylabs.io/v1/queries',
+          auth: this.oxylabsAuth,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          data: JSON.stringify(payload),
+          timeout: 25000 // 25 second timeout for Vercel
+        };
+
+        const response = await axios(config);
+        
+        // Log the response for debugging
+        console.log(`Attempt ${i + 1} response status:`, response.status);
+        if (response.data?.results?.[0]?.content) {
+          console.log(`Attempt ${i + 1} success - got content`);
+          return response;
+        } else {
+          console.log(`Attempt ${i + 1} failed - no content in response`);
+        }
+      } catch (error) {
+        console.log(`Attempt ${i + 1} failed:`, error.message);
+        if (i === attempts.length - 1) {
+          throw error; // Re-throw on last attempt
+        }
+      }
+    }
   }
   
   getCategoryQuery(category) {
