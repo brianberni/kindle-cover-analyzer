@@ -30,7 +30,19 @@ export default async function handler(req, res) {
           source: 'amazon_search',
           query: 'kindle romance bestsellers',
           domain: 'com',
-          parse: true
+          start_page: 1,
+          pages: 1,
+          parse: true,
+          context: [
+            {
+              key: 'sort_by',
+              value: 'featured'
+            },
+            {
+              key: 'currency', 
+              value: 'USD'
+            }
+          ]
         };
 
         console.log('Testing Oxylabs with payload:', payload);
@@ -45,7 +57,7 @@ export default async function handler(req, res) {
           headers: {
             'Content-Type': 'application/json'
           },
-          data: JSON.stringify(payload),
+          data: payload,
           timeout: 20000
         });
 

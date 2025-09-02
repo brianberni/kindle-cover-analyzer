@@ -295,63 +295,68 @@ class KindleScraper {
       throw new Error('Oxylabs credentials not configured');
     }
 
-    // Try different approaches to get Amazon Kindle bestseller data
-    const attempts = [
-      // Approach 1: Direct bestseller URL
-      {
-        source: 'amazon',
-        url: `https://www.amazon.com/gp/bestsellers/digital-text/${this.categories[category]?.id || '158566011'}/ref=zg_bs_nav_digital-text_1`,
-        parse: true
-      },
-      // Approach 2: Search query with specific sorting
-      {
-        source: 'amazon_search',
-        query: this.getCategoryQuery(category),
-        domain: 'com',
-        parse: true,
-        sort_by: 'relevance'
-      },
-      // Approach 3: Alternative search approach
-      {
-        source: 'amazon_search',
-        query: `kindle ${category.replace(/-/g, ' ')} bestsellers`,
-        domain: 'com',
-        parse: true
-      }
-    ];
+    // Use proper Oxylabs format according to documentation
+    const payload = {
+      source: 'amazon_search',
+      query: this.getCategoryQuery(category),
+      domain: 'com',
+      start_page: 1,
+      pages: 1,
+      parse: true,
+      context: [
+        {
+          key: 'sort_by',
+          value: 'featured' // Get Amazon's featured/bestseller results
+        },
+        {
+          key: 'currency',
+          value: 'USD'
+        }
+      ]
+    };
 
-    for (let i = 0; i < attempts.length; i++) {
-      const payload = attempts[i];
-      console.log(`Oxylabs attempt ${i + 1}:`, JSON.stringify(payload, null, 2));
+    console.log('Oxylabs request (following documentation):', JSON.stringify(payload, null, 2));
 
-      try {
-        const config = {
-          method: 'post',
-          url: 'https://realtime.oxylabs.io/v1/queries',
-          auth: this.oxylabsAuth,
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          data: JSON.stringify(payload),
-          timeout: 25000 // 25 second timeout for Vercel
-        };
+    try {
+      const config = {
+        method: 'post',
+        url: 'https://realtime.oxylabs.io/v1/queries',
+        auth: this.oxylabsAuth,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        data: payload, // Send as object, not JSON string
+        timeout: 25000 // 25 second timeout for Vercel
+      };
 
-        const response = await axios(config);
+      const response = await axios(config);
+      
+      console.log('Oxylabs response status:', response.status);
+      console.log('Response has results:', !!response.data?.results);
+      console.log('Response structure:', Object.keys(response.data || {}));
+      
+      if (response.data?.results?.[0]) {
+        const result = response.data.results[0];
+        console.log('Result keys:', Object.keys(result));
+        console.log('Has content:', !!result.content);
+        console.log('Content keys:', Object.keys(result.content || {}));
         
-        // Log the response for debugging
-        console.log(`Attempt ${i + 1} response status:`, response.status);
-        if (response.data?.results?.[0]?.content) {
-          console.log(`Attempt ${i + 1} success - got content`);
-          return response;
-        } else {
-          console.log(`Attempt ${i + 1} failed - no content in response`);
-        }
-      } catch (error) {
-        console.log(`Attempt ${i + 1} failed:`, error.message);
-        if (i === attempts.length - 1) {
-          throw error; // Re-throw on last attempt
+        if (result.content?.results) {
+          console.log('Content results keys:', Object.keys(result.content.results));
+          if (result.content.results.organic) {
+            console.log(`Found ${result.content.results.organic.length} organic results`);
+          }
         }
       }
+      
+      return response;
+    } catch (error) {
+      console.error('Oxylabs request failed:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      }
+      throw error;
     }
   }
   
