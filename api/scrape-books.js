@@ -38,21 +38,33 @@ export default async function handler(req, res) {
     console.log('Is this real Amazon data?', books[0]?.amazonUrl ? 'YES' : 'NO (demo data)');
     
     // Transform the data to match expected frontend format
-    const transformedBooks = books.map((book, index) => ({
-      title: book.title,
-      author: book.author,
-      imageUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`,
-      coverUrl: book.coverUrl || `https://picsum.photos/300/400?random=${index + 1}`, // Frontend expects coverUrl
-      rank: book.rank,
-      price: book.price,
-      rating: book.rating,
-      category: category,
-      // Additional metadata for analysis
-      amazonUrl: book.amazonUrl,
-      reviewsCount: book.reviewsCount,
-      isBestSeller: book.isBestSeller,
-      trendingScore: book.trendingScore
-    }));
+    const transformedBooks = books.map((book, index) => {
+      let imageUrl = book.coverUrl;
+      
+      // If we have a real Amazon image URL, proxy it to avoid CORS issues
+      if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com'))) {
+        imageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+      } else if (!imageUrl) {
+        // Fallback to placeholder only if no image at all
+        imageUrl = `https://via.placeholder.com/300x400/666666/ffffff?text=${encodeURIComponent(book.title?.substring(0, 20) || 'Book')}`;
+      }
+      
+      return {
+        title: book.title,
+        author: book.author,
+        imageUrl,
+        coverUrl: imageUrl, // Frontend expects coverUrl
+        rank: book.rank,
+        price: book.price,
+        rating: book.rating,
+        category: category,
+        // Additional metadata for analysis
+        amazonUrl: book.amazonUrl,
+        reviewsCount: book.reviewsCount,
+        isBestSeller: book.isBestSeller,
+        trendingScore: book.trendingScore
+      };
+    });
     
     console.log('Sample transformed book:', transformedBooks[0]);
     
