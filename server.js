@@ -28,6 +28,24 @@ app.use(express.static('public'));
 app.use('/api/scraper', scraperRoutes);
 app.use('/api/analysis', analysisRoutes);
 
+// Categories endpoint
+app.get('/api/categories', (req, res) => {
+  const categories = [
+    'romance',
+    'mystery-thriller', 
+    'science-fiction',
+    'fantasy',
+    'young-adult',
+    'literary-fiction',
+    'contemporary-fiction',
+    'historical-fiction',
+    'horror',
+    'business'
+  ];
+  
+  res.json({ categories });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
