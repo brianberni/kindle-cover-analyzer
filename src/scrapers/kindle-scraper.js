@@ -301,24 +301,55 @@ class KindleScraper {
       throw new Error('Oxylabs credentials not configured');
     }
 
-    // Use Amazon bestsellers source for actual bestseller page data
     const categoryInfo = this.categories[category];
     if (!categoryInfo) {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    const payload = {
-      source: 'amazon_bestsellers',
-      domain: 'com',
-      query: categoryInfo.id, // Use category ID directly
-      start_page: 1,
-      parse: true
-    };
-    
-    console.log(`Oxylabs bestsellers for ${category} (ID: ${payload.query}):`);
+    // Try amazon_bestsellers first, fallback to amazon_search if it fails
+    try {
+      const payload = {
+        source: 'amazon_bestsellers',
+        domain: 'com',
+        query: categoryInfo.id, // Use category ID directly
+        start_page: 1,
+        parse: true
+      };
+      
+      console.log(`Oxylabs bestsellers for ${category} (ID: ${payload.query}):`);
+      console.log('Oxylabs request (following documentation):', JSON.stringify(payload, null, 2));
+      
+      return await this.makeHttpRequest(payload);
+    } catch (bestsellerError) {
+      console.warn(`❌ amazon_bestsellers failed for ${category}:`, bestsellerError.message);
+      console.log('🔄 Falling back to amazon_search approach...');
+      
+      // Fallback to search approach
+      const searchPayload = {
+        source: 'amazon_search',
+        query: this.getCategoryQuery(category),
+        domain: 'com',
+        start_page: 1,
+        pages: 1,
+        parse: true,
+        context: [
+          {
+            key: 'sort_by',
+            value: 'featured' // Amazon's featured results = bestsellers
+          },
+          {
+            key: 'currency',
+            value: 'USD'
+          }
+        ]
+      };
+      
+      console.log(`Oxylabs search fallback for ${category}: "${searchPayload.query}"`);
+      return await this.makeHttpRequest(searchPayload);
+    }
+  }
 
-    console.log('Oxylabs request (following documentation):', JSON.stringify(payload, null, 2));
-
+  async makeHttpRequest(payload) {
     try {
       const config = {
         method: 'post',
@@ -327,37 +358,13 @@ class KindleScraper {
         headers: {
           'Content-Type': 'application/json'
         },
-        data: payload, // Send as object, not JSON string
+        data: payload,
         timeout: 25000 // 25 second timeout for Vercel
       };
-
-      const response = await axios(config);
       
-      console.log('Oxylabs response status:', response.status);
-      console.log('Response has results:', !!response.data?.results);
-      console.log('Response structure:', Object.keys(response.data || {}));
-      
-      if (response.data?.results?.[0]) {
-        const result = response.data.results[0];
-        console.log('Result keys:', Object.keys(result));
-        console.log('Has content:', !!result.content);
-        console.log('Content keys:', Object.keys(result.content || {}));
-        
-        if (result.content?.results) {
-          console.log('Content results keys:', Object.keys(result.content.results));
-          if (result.content.results.organic) {
-            console.log(`Found ${result.content.results.organic.length} organic results`);
-          }
-        }
-      }
-      
-      return response;
+      return await axios(config);
     } catch (error) {
-      console.error('Oxylabs request failed:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', JSON.stringify(error.response.data, null, 2));
-      }
+      console.error(`HTTP request failed:`, error.response?.data || error.message);
       throw error;
     }
   }
