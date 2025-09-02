@@ -28,19 +28,130 @@ app.use(express.static('public'));
 app.use('/api/scraper', scraperRoutes);
 app.use('/api/analysis', analysisRoutes);
 
+// Direct API endpoints that JavaScript expects
+app.get('/api/scrape-books', async (req, res) => {
+  try {
+    const { category, limit = 20 } = req.query;
+    
+    if (!category) {
+      return res.status(400).json({ error: 'Category is required' });
+    }
+    
+    // Import and use the scraper
+    const { default: KindleScraper } = await import('./src/scrapers/kindle-scraper.js');
+    const scraper = new KindleScraper();
+    const books = await scraper.scrapeCategory(category, parseInt(limit));
+    
+    res.json({
+      category,
+      count: books.length,
+      books
+    });
+  } catch (error) {
+    console.error('Scrape books error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const { books } = req.body;
+    
+    if (!books || !Array.isArray(books)) {
+      return res.status(400).json({ error: 'Books array is required' });
+    }
+    
+    // Import and use the analyzer
+    const { default: EnhancedCoverAnalyzer } = await import('./src/analysis/enhanced-analyzer.js');
+    const analyzer = new EnhancedCoverAnalyzer();
+    const analyses = await analyzer.analyzeCovers(books);
+    
+    res.json({
+      analyses,
+      totalAnalyzed: analyses.length
+    });
+  } catch (error) {
+    console.error('Analysis error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Categories endpoint
 app.get('/api/categories', (req, res) => {
   const categories = [
+    // Romance Categories
     'romance',
-    'mystery-thriller', 
+    'contemporary-romance',
+    'paranormal-romance',
+    'historical-romance',
+    'regency-romance',
+    'romantic-suspense',
+    'sports-romance',
+    'new-adult-romance',
+    'holiday-romance',
+    'western-romance',
+    'military-romance',
+    'clean-wholesome-romance',
+    
+    // Mystery, Thriller & Suspense
+    'mystery-thriller',
+    'mystery',
+    'thriller',
+    'psychological-thrillers',
+    'crime-thrillers',
+    'domestic-thriller',
+    'cozy-mystery',
+    'police-procedurals',
+    
+    // Science Fiction & Fantasy
     'science-fiction',
     'fantasy',
-    'young-adult',
+    'paranormal-fantasy',
+    'epic-fantasy',
+    'urban-fantasy',
+    'dystopian',
+    'space-opera',
+    'time-travel',
+    'steampunk',
+    'cyberpunk',
+    
+    // Teen & Young Adult
+    'teen-young-adult',
+    'ya-fantasy',
+    'ya-romance',
+    'ya-science-fiction',
+    'ya-dystopian',
+    'ya-paranormal',
+    'ya-contemporary',
+    
+    // Literary & General Fiction
     'literary-fiction',
     'contemporary-fiction',
     'historical-fiction',
+    'women-fiction',
+    'family-saga',
+    'psychological-fiction',
+    
+    // Horror & Supernatural
     'horror',
-    'business'
+    'paranormal',
+    'supernatural',
+    'gothic',
+    'vampire',
+    'werewolves-shapeshifters',
+    
+    // Action & Adventure
+    'action-adventure',
+    'war-military',
+    'spy-thrillers',
+    
+    // Non-Fiction
+    'business',
+    'self-help',
+    'biography',
+    'health-fitness',
+    'cooking',
+    'history'
   ];
   
   res.json({ categories });
