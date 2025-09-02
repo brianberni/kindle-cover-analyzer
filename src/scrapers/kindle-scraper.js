@@ -143,9 +143,19 @@ class KindleScraper {
           console.log('Using parsed results from amazon_search');
           console.log(`Found ${result.content.results.organic.length} organic results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
+        } else if (result.content && result.content.bestsellers) {
+          // Direct bestseller page response
+          console.log('Using bestseller page results');
+          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
+          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
         } else {
-          console.log('Unexpected response format from amazon_search');
+          console.log('Unexpected response format');
           console.log('Response content keys:', Object.keys(result.content || {}));
+          // Try to find any products array
+          if (result.content && result.content.products) {
+            console.log('Found products array, trying to parse...');
+            books = this.parseAmazonSearchResults(result.content.products, limit);
+          }
         }
         
         if (books.length > 0) {
@@ -295,25 +305,46 @@ class KindleScraper {
       throw new Error('Oxylabs credentials not configured');
     }
 
-    // Use Amazon search with very specific queries for better results
-    const payload = {
-      source: 'amazon_search',
-      query: this.getCategoryQuery(category),
-      domain: 'com',
-      start_page: 1,
-      pages: 1,
-      parse: true,
-      context: [
-        {
-          key: 'sort_by',
-          value: 'price_low_to_high' // Try different sort to get varied results
-        },
-        {
-          key: 'currency',
-          value: 'USD'
-        }
-      ]
-    };
+    // Try direct bestseller page first for correct ranking order
+    const categoryInfo = this.categories[category];
+    let payload;
+    
+    if (categoryInfo && categoryInfo.id) {
+      // Approach 1: Direct bestseller page (correct order)
+      payload = {
+        source: 'amazon',
+        url: `https://www.amazon.com/gp/bestsellers/digital-text/${categoryInfo.id}`,
+        parse: true,
+        context: [
+          {
+            key: 'currency',
+            value: 'USD'
+          }
+        ]
+      };
+      console.log(`Using direct bestseller URL for correct ranking: ${payload.url}`);
+    } else {
+      // Approach 2: Search with bestseller sorting
+      payload = {
+        source: 'amazon_search',
+        query: this.getCategoryQuery(category),
+        domain: 'com',
+        start_page: 1,
+        pages: 1,
+        parse: true,
+        context: [
+          {
+            key: 'sort_by',
+            value: 'featured' // Amazon's featured = bestsellers
+          },
+          {
+            key: 'currency',
+            value: 'USD'
+          }
+        ]
+      };
+      console.log(`Using search query for ${category}: ${payload.query}`);
+    }
     
     console.log(`Oxylabs search for ${category}: "${payload.query}"`);
 
@@ -461,6 +492,63 @@ class KindleScraper {
     };
     
     return queries[category] || `kindle ${category.replace(/-/g, ' ')} bestsellers`;
+  }
+
+  parseAmazonBestsellerResults(bestsellerItems, limit) {
+    const books = [];
+    
+    bestsellerItems.slice(0, limit).forEach((item, index) => {
+      try {
+        // Extract data from bestseller page structure
+        const title = item.title || item.name || '';
+        const author = item.author || item.by || item.manufacturer || '';
+        const price = item.price ? `$${item.price}` : item.price_str || '';
+        const rating = item.rating || item.stars || '';
+        
+        // Try multiple possible image field names from bestseller pages
+        const imageUrl = item.image || 
+                         item.thumbnail || 
+                         item.cover_image ||
+                         item.url_image ||
+                         item.img_url ||
+                         '';
+        
+        const url = item.url || item.link || '';
+        const rank = item.rank || item.position || (index + 1);
+        
+        console.log(`Parsing bestseller item ${index + 1}:`, {
+          title: title.substring(0, 50),
+          author,
+          price,
+          hasImage: !!imageUrl,
+          imageUrl: imageUrl ? imageUrl.substring(0, 60) + '...' : 'NO IMAGE',
+          rank
+        });
+        
+        // ONLY accept books with real Amazon images
+        if (title && imageUrl && (imageUrl.includes('amazon') || imageUrl.includes('ssl-images-amazon') || imageUrl.includes('m.media-amazon'))) {
+          books.push({
+            rank: rank,
+            title: title.trim(),
+            author: author ? author.trim() : '',
+            coverUrl: this.getHighResImage(imageUrl),
+            price: price,
+            rating: rating ? `${rating} out of 5 stars` : '',
+            amazonUrl: url,
+            reviewsCount: item.reviews_count || 0,
+            isBestSeller: true, // All items from bestseller page are bestsellers
+            trendingScore: 100 - (index * 2) // Higher score for higher rank
+          });
+          console.log(`✅ Added bestseller with real Amazon image: ${title}`);
+        } else {
+          console.log(`❌ Skipped bestseller - missing image or not Amazon: ${title}`);
+        }
+      } catch (error) {
+        console.error('Error parsing bestseller item:', error);
+      }
+    });
+    
+    return books;
   }
 
   parseAmazonSearchResults(organicResults, limit) {
