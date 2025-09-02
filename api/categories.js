@@ -10,18 +10,80 @@ export default function handler(req, res) {
   }
 
   try {
-    // Simple categories list for now
     const categories = [
+      // Romance Categories
       'romance',
-      'mystery-thriller', 
+      'contemporary-romance',
+      'paranormal-romance',
+      'historical-romance',
+      'regency-romance',
+      'romantic-suspense',
+      'sports-romance',
+      'new-adult-romance',
+      'holiday-romance',
+      'western-romance',
+      'military-romance',
+      'clean-wholesome-romance',
+      
+      // Mystery, Thriller & Suspense
+      'mystery-thriller',
+      'mystery',
+      'thriller',
+      'psychological-thrillers',
+      'crime-thrillers',
+      'domestic-thriller',
+      'cozy-mystery',
+      'police-procedurals',
+      
+      // Science Fiction & Fantasy
       'science-fiction',
       'fantasy',
-      'young-adult',
+      'paranormal-fantasy',
+      'epic-fantasy',
+      'urban-fantasy',
+      'dystopian',
+      'space-opera',
+      'time-travel',
+      'steampunk',
+      'cyberpunk',
+      
+      // Teen & Young Adult
+      'teen-young-adult',
+      'ya-fantasy',
+      'ya-romance',
+      'ya-science-fiction',
+      'ya-dystopian',
+      'ya-paranormal',
+      'ya-contemporary',
+      
+      // Literary & General Fiction
       'literary-fiction',
       'contemporary-fiction',
       'historical-fiction',
+      'women-fiction',
+      'family-saga',
+      'psychological-fiction',
+      
+      // Horror & Supernatural
       'horror',
-      'business'
+      'paranormal',
+      'supernatural',
+      'gothic',
+      'vampire',
+      'werewolves-shapeshifters',
+      
+      // Action & Adventure
+      'action-adventure',
+      'war-military',
+      'spy-thrillers',
+      
+      // Non-Fiction
+      'business',
+      'self-help',
+      'biography',
+      'health-fitness',
+      'cooking',
+      'history'
     ];
     
     res.json({ categories });
