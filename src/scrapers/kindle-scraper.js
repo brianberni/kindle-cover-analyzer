@@ -117,74 +117,29 @@ class KindleScraper {
 
     const categoryInfo = this.categories[category];
     
-    console.log(`Scraping Amazon Kindle ${category} category...`);
-    console.log(`Query: ${this.getCategoryQuery(category)}`);
+    console.log(`Scraping Amazon Kindle ${category} category directly...`);
+    console.log(`Direct Amazon URL approach - no proxy service needed initially`);
 
     try {
-      const response = await this.makeOxylabsRequest(category);
+      const response = await this.makeDirectAmazonRequest(category);
       
-      console.log('Oxylabs response status:', response.status);
-      console.log('Oxylabs response structure:', Object.keys(response.data || {}));
+      console.log('Direct Amazon response received');
+      console.log(`HTML response length: ${response.data?.length || 0} characters`);
       
-      // Log job ID for support if present
-      if (response.data?.job_id) {
-        console.log(`Oxylabs Job ID: ${response.data.job_id}`);
-      }
-      
-      if (response.data && response.data.results && response.data.results[0]) {
-        const result = response.data.results[0];
-        console.log('Result keys:', Object.keys(result));
+      if (response.data && typeof response.data === 'string') {
+        console.log('Parsing Amazon HTML directly using friend\'s method...');
         
-        // Handle parsed bestseller data from Oxylabs
-        let books = [];
-        
-        if (result.content && result.content.results) {
-          // Amazon bestsellers parsed response (results array)
-          console.log('Using parsed bestsellers from amazon_bestsellers');
-          console.log(`Found ${result.content.results.length} bestseller items`);
-          books = this.parseAmazonBestsellerResults(result.content.results, limit);
-        } else if (result.content && result.content.bestsellers) {
-          // Alternative bestsellers array format
-          console.log('Using bestsellers array from amazon_bestsellers');
-          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
-          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
-        } else if (result.content && typeof result.content === 'string') {
-          // Raw HTML from bestseller page (fallback)
-          console.log('Parsing raw HTML from bestseller page');
-          console.log(`HTML length: ${result.content.length} characters`);
-          books = this.parseBooks(result.content, limit);
-        } else if (result.content && result.content.results && result.content.results.organic) {
-          // Amazon search response format (fallback)
-          console.log('Using parsed results from amazon_search (bestsellers sorted)');
-          console.log(`Found ${result.content.results.organic.length} search results`);
-          books = this.parseAmazonSearchResults(result.content.results.organic, limit);
-        } else if (result.content && result.content.products) {
-          // Alternative products array format
-          console.log('Found products array, parsing as search results');
-          books = this.parseAmazonSearchResults(result.content.products, limit);
-        } else {
-          console.log('Unexpected response format - debugging...');
-          console.log('Result keys:', Object.keys(result));
-          if (result.content) {
-            console.log('Content type:', typeof result.content);
-            console.log('Content keys:', Object.keys(result.content || {}));
-            console.log('Full content structure:', JSON.stringify(result.content, null, 2));
-          } else {
-            console.log('No content in result:', result);
-          }
-        }
+        const books = this.parseAmazonBestsellerHTML(response.data, limit, category);
         
         if (books.length > 0) {
           console.log(`✅ Successfully scraped ${books.length} REAL Amazon books from ${category}`);
           return books;
         } else {
-          console.log(`❌ No real Amazon books found - Oxylabs may not be working properly`);
-          throw new Error(`No real Amazon books found for ${category}. Check Oxylabs connection.`);
+          console.log(`❌ No valid books found in Amazon HTML for ${category}`);
+          throw new Error(`No books found in Amazon bestseller page for ${category}`);
         }
       } else {
-        console.log(`❌ Invalid response structure from Oxylabs`);
-        console.log('Response data:', JSON.stringify(response.data, null, 2));
-        throw new Error(`Invalid Oxylabs response for ${category}. No real Amazon data available.`);
+        throw new Error(`Invalid response from Amazon - expected HTML string`);
       }
     } catch (error) {
       console.error(`Scraping failed:`, error.response?.data || error.message);
@@ -443,37 +398,40 @@ class KindleScraper {
     return books.slice(0, Math.min(limit, books.length));
   }
 
-  async makeOxylabsRequest(category) {
-    // Check if we have valid credentials
-    if (!this.oxylabsAuth.username || !this.oxylabsAuth.password) {
-      console.log('Missing Oxylabs credentials, using demo data');
-      throw new Error('Oxylabs credentials not configured');
-    }
-
+  async makeDirectAmazonRequest(category) {
     const categoryInfo = this.categories[category];
     if (!categoryInfo) {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use amazon_bestsellers source with proper format from documentation
-    const payload = {
-      source: 'amazon_bestsellers',
-      domain: 'com',
-      query: categoryInfo.id,
-      parse: true,
-      start_page: 1,
-      context: [
-        {
-          key: 'geo_location',
-          value: 'United States'
-        }
-      ]
+    // Use direct Amazon bestseller page URL
+    const amazonUrl = `https://www.amazon.com/Best-Sellers-Kindle-Store/zgbs/digital-text/${categoryInfo.id}`;
+    
+    console.log(`Direct Amazon request for ${category}: ${amazonUrl}`);
+    
+    const config = {
+      method: 'get',
+      url: amazonUrl,
+      timeout: 15000, // 15 second timeout
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+      }
     };
     
-    console.log(`Oxylabs bestseller request for ${category} (ID: ${categoryInfo.id})`);
-    console.log('Oxylabs request:', JSON.stringify(payload, null, 2));
-    
-    return await this.makeHttpRequest(payload);
+    try {
+      const response = await axios(config);
+      console.log(`✅ Successfully fetched Amazon page (${response.data.length} chars)`);
+      return { data: response.data };
+    } catch (error) {
+      console.error('Direct Amazon request failed:', error.message);
+      throw error;
+    }
   }
 
   async makeHttpRequest(payload) {
@@ -685,6 +643,172 @@ class KindleScraper {
     // Keep Amazon's bestseller order - don't re-sort
     console.log(`✅ Successfully parsed ${books.length} bestsellers from Amazon page`);
     
+    return books;
+  }
+
+  parseAmazonBestsellerHTML(html, limit, category) {
+    const $ = cheerio.load(html);
+    const books = [];
+    
+    console.log(`Parsing Amazon bestseller HTML for ${category}...`);
+    
+    // Look for book chunks - Amazon uses various selectors for bestseller items
+    const possibleSelectors = [
+      '.zg-item-immersion',           // Common bestseller item selector
+      '.zg_itemImmersion',            // Alternative bestseller selector  
+      '[data-index]',                 // Items with data-index attributes
+      '.s-result-item',               // Search result items
+      '.a-carousel-card',             // Carousel cards
+      '.zg_itemRow',                  // Row-based layout
+      '.p13n-item-container'          // Product recommendation containers
+    ];
+    
+    let $bookElements = $();
+    let usedSelector = '';
+    
+    // Try each selector until we find book elements
+    for (const selector of possibleSelectors) {
+      $bookElements = $(selector);
+      if ($bookElements.length > 0) {
+        usedSelector = selector;
+        console.log(`Found ${$bookElements.length} book elements using selector: ${selector}`);
+        break;
+      }
+    }
+    
+    if ($bookElements.length === 0) {
+      console.log('No book elements found with any selector. Debugging HTML structure...');
+      // Log some HTML structure for debugging
+      console.log('Page title:', $('title').text());
+      console.log('Page has bestseller content:', html.includes('Best Sellers'));
+      console.log('Page has zg- classes:', html.includes('zg-'));
+      console.log('HTML sample:', html.substring(0, 500));
+      return [];
+    }
+    
+    // Process each book element (limit to first 20 to avoid lazy loading issues)
+    const elementsToProcess = Math.min($bookElements.length, limit || 20);
+    console.log(`Processing first ${elementsToProcess} book elements...`);
+    
+    $bookElements.slice(0, elementsToProcess).each((index, element) => {
+      try {
+        const $bookEl = $(element);
+        
+        // Extract rank - look for rank indicators
+        let rank = index + 1; // Default to position
+        const rankText = $bookEl.find('.zg-rank, .zg_rankNumber, [class*="rank"]').text();
+        if (rankText) {
+          const rankMatch = rankText.match(/(\d+)/);
+          if (rankMatch) {
+            rank = parseInt(rankMatch[1]);
+          }
+        }
+        
+        // Extract cover image using friend's method
+        const $img = $bookEl.find('img').first();
+        let coverUrl = '';
+        let title = '';
+        
+        if ($img.length > 0) {
+          coverUrl = $img.attr('src') || $img.attr('data-src') || '';
+          title = $img.attr('alt') || '';
+          
+          // Extract higher resolution images from data-a-dynamic-image if available
+          const dynamicImageData = $img.attr('data-a-dynamic-image');
+          if (dynamicImageData) {
+            try {
+              const imageData = JSON.parse(dynamicImageData.replace(/&quot;/g, '"'));
+              const imageUrls = Object.keys(imageData);
+              // Get the highest resolution image
+              if (imageUrls.length > 0) {
+                coverUrl = imageUrls[imageUrls.length - 1] || coverUrl;
+              }
+            } catch (e) {
+              console.log('Could not parse dynamic image data:', e.message);
+            }
+          }
+        }
+        
+        // Extract title if not found in alt text
+        if (!title) {
+          title = $bookEl.find('a[href*="/dp/"], .p13n-sc-truncated, [class*="title"]').first().text().trim();
+        }
+        
+        // Extract author
+        let author = '';
+        const authorSelectors = [
+          '.a-size-small .a-link-child',
+          '.a-row .a-size-small a', 
+          '[class*="author"]',
+          '.a-size-base + .a-size-small a'
+        ];
+        
+        for (const selector of authorSelectors) {
+          author = $bookEl.find(selector).first().text().trim();
+          if (author) break;
+        }
+        
+        // Extract price
+        let price = '';
+        const priceSelectors = [
+          '.a-price .a-offscreen',
+          '.a-color-price',
+          '[class*="price"]'
+        ];
+        
+        for (const selector of priceSelectors) {
+          price = $bookEl.find(selector).first().text().trim();
+          if (price) break;
+        }
+        
+        // Extract rating
+        let rating = '';
+        const $ratingEl = $bookEl.find('.a-icon-alt, [class*="rating"]').first();
+        if ($ratingEl.length > 0) {
+          rating = $ratingEl.text().trim() || $ratingEl.attr('title') || '';
+        }
+        
+        // Extract ASIN from URL
+        let asin = '';
+        const $link = $bookEl.find('a[href*="/dp/"]').first();
+        if ($link.length > 0) {
+          const href = $link.attr('href') || '';
+          const asinMatch = href.match(/\/dp\/([A-Z0-9]{10})/);
+          if (asinMatch) {
+            asin = asinMatch[1];
+          }
+        }
+        
+        console.log(`Book ${rank}: "${title.substring(0, 50)}" by ${author}`);
+        console.log(`  Cover: ${coverUrl.substring(0, 60)}...`);
+        console.log(`  Price: ${price}, Rating: ${rating}, ASIN: ${asin}`);
+        
+        // Only include books with valid data
+        if (title && coverUrl) {
+          books.push({
+            rank: rank,
+            title: title.trim(),
+            author: author.trim() || 'Unknown Author',
+            coverUrl: this.getHighResImage(coverUrl),
+            price: price || 'Price not available',
+            rating: rating || 'Rating not available',
+            amazonUrl: asin ? `https://amazon.com/dp/${asin}` : `https://amazon.com/s?k=${encodeURIComponent(title)}`,
+            reviewsCount: 0, // Could extract if needed
+            isBestSeller: true,
+            trendingScore: Math.max(0, 100 - (rank * 2)),
+            asin: asin,
+            category: category
+          });
+        } else {
+          console.log(`  ⚠️ Skipped - missing title (${!!title}) or cover (${!!coverUrl})`);
+        }
+        
+      } catch (error) {
+        console.error(`Error parsing book element ${index}:`, error.message);
+      }
+    });
+    
+    console.log(`✅ Successfully parsed ${books.length} books from Amazon HTML`);
     return books;
   }
 
