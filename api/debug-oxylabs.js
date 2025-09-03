@@ -20,8 +20,18 @@ export default async function handler(req, res) {
     
     console.log('=== OXYLABS DEBUG ===');
     console.log('Environment check:');
-    console.log('OXYLABS_USERNAME:', process.env.OXYLABS_USERNAME ? 'SET' : 'NOT SET');
-    console.log('OXYLABS_PASSWORD:', process.env.OXYLABS_PASSWORD ? 'SET' : 'NOT SET');
+    console.log('OXYLABS_USERNAME:', process.env.OXYLABS_USERNAME ? `SET (${process.env.OXYLABS_USERNAME.substring(0, 4)}***)` : 'NOT SET');
+    console.log('OXYLABS_PASSWORD:', process.env.OXYLABS_PASSWORD ? `SET (${process.env.OXYLABS_PASSWORD.length} chars)` : 'NOT SET');
+    
+    // Test credentials first with a simple request
+    if (!process.env.OXYLABS_USERNAME || !process.env.OXYLABS_PASSWORD) {
+      return res.json({
+        error: 'Oxylabs credentials not configured',
+        hasUsername: !!process.env.OXYLABS_USERNAME,
+        hasPassword: !!process.env.OXYLABS_PASSWORD,
+        message: 'Please set OXYLABS_USERNAME and OXYLABS_PASSWORD environment variables in Vercel'
+      });
+    }
     
     const KindleScraper = await loadKindleScraper();
     const scraper = new KindleScraper();
