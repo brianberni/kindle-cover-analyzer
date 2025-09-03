@@ -33,13 +33,19 @@ class EnhancedCoverAnalyzer extends CoverAnalyzer {
 
   async initializeVisionAPI() {
     try {
-      // Only initialize if Google Cloud credentials are available
-      const { ImageAnnotatorClient } = await import('@google-cloud/vision');
-      this.visionClient = new ImageAnnotatorClient();
-      console.log('Google Vision API initialized successfully');
+      // Only initialize if Google Cloud credentials are available and package is installed
+      if (process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        const { ImageAnnotatorClient } = await import('@google-cloud/vision');
+        this.visionClient = new ImageAnnotatorClient();
+        console.log('Google Vision API initialized successfully');
+      } else {
+        console.log('Google Cloud credentials not found, using alternative analysis methods');
+        this.visionClient = null;
+      }
     } catch (error) {
       console.log('Google Vision API not available:', error.message);
       console.log('Enhanced analysis will use alternative methods');
+      this.visionClient = null;
     }
   }
 
