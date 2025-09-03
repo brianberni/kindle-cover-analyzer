@@ -138,16 +138,16 @@ class KindleScraper {
         // Handle structured data from parse: true
         let books = [];
         
-        if (result.content && result.content.bestsellers) {
-          // Amazon bestsellers response format
+        if (result.content && result.content.results && result.content.results.organic) {
+          // Amazon search response format with bestsellers sorting
+          console.log('Using parsed results from amazon_search (bestsellers sorted)');
+          console.log(`Found ${result.content.results.organic.length} search results`);
+          books = this.parseAmazonSearchResults(result.content.results.organic, limit);
+        } else if (result.content && result.content.bestsellers) {
+          // Amazon bestsellers response format (fallback)
           console.log('Using parsed results from amazon_bestsellers');
           console.log(`Found ${result.content.bestsellers.length} bestseller items`);
           books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
-        } else if (result.content && result.content.results && result.content.results.organic) {
-          // Standard amazon_search response format (fallback)
-          console.log('Using parsed results from amazon_search');
-          console.log(`Found ${result.content.results.organic.length} search results`);
-          books = this.parseAmazonSearchResults(result.content.results.organic, limit);
         } else if (result.content && result.content.products) {
           // Alternative products array format
           console.log('Found products array, parsing as search results');
@@ -310,13 +310,18 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use Amazon bestsellers source with category ID
+    // Use Amazon search with category ID and bestsellers sort for accurate results
     const payload = {
-      source: 'amazon_bestsellers',
-      query: categoryInfo.id, // Use category ID directly
+      source: 'amazon_search',
+      query: this.getCategoryQuery(category), // Use search query for the category
       domain: 'com',
       parse: true,
+      sort_by: 'bestsellers', // This sorts by bestsellers within the category
       context: [
+        {
+          key: 'category_id',
+          value: categoryInfo.id
+        },
         {
           key: 'currency', 
           value: 'USD'
