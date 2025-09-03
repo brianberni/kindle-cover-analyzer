@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Glitching Issue</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .debug-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-image {
+            width: 200px;
+            height: 280px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        .test-image.loading {
+            opacity: 0.7;
+            filter: blur(1px);
+        }
+        .test-image.loaded {
+            opacity: 1;
+            filter: none;
+        }
+        .status {
+            font-size: 14px;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 4px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Kindle Cover Analyzer - Debug Glitching Issue</h1>
+    
+    <div class="debug-panel">
+        <h2>Environment Check</h2>
+        <div id="env-check"></div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>API Endpoints Test</h2>
+        <div id="api-test"></div>
+        <button onclick="testAPIs()">Test APIs</button>
+    </div>
+
+    <div class="debug-panel">
+        <h2>Image Loading Test</h2>
+        <div id="image-test"></div>
+        <button onclick="testImages()">Test Image Loading</button>
+        
+        <div id="test-images" style="display: flex; flex-wrap: wrap;">
+            <!-- Test images will be added here -->
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>JavaScript Console Log</h2>
+        <div id="console-log" style="background: #000; color: #0f0; padding: 10px; font-family: monospace; height: 200px; overflow-y: auto;">
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleLogDiv = document.getElementById('console-log');
+        
+        function addToConsoleLog(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : '#0f0';
+            consoleLogDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleLogDiv.scrollTop = consoleLogDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            addToConsoleLog(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            addToConsoleLog(args.join(' '), 'error');
+        };
+
+        // Environment check
+        function checkEnvironment() {
+            const envDiv = document.getElementById('env-check');
+            const checks = [
+                { name: 'JavaScript Enabled', check: () => true },
+                { name: 'Fetch API Available', check: () => typeof fetch !== 'undefined' },
+                { name: 'URL Constructor Available', check: () => typeof URL !== 'undefined' },
+                { name: 'Local Storage Available', check: () => typeof localStorage !== 'undefined' },
+                { name: 'Image Constructor Available', check: () => typeof Image !== 'undefined' }
+            ];
+            
+            envDiv.innerHTML = '';
+            checks.forEach(item => {
+                const status = item.check() ? 'success' : 'error';
+                const text = item.check() ? '✅ Available' : '❌ Not Available';
+                envDiv.innerHTML += `<div class="status ${status}">${item.name}: ${text}</div>`;
+            });
+        }
+
+        // Test API endpoints
+        async function testAPIs() {
+            const apiDiv = document.getElementById('api-test');
+            apiDiv.innerHTML = '<div class="status loading">Testing APIs...</div>';
+            
+            const endpoints = [
+                '/api/categories',
+                '/api/scrape-books?category=romance&limit=1',
+                '/api/image-proxy?url=https%3A%2F%2Fm.media-amazon.com%2Fimages%2FI%2F71dRnPua-KL._SL500_.jpg'
+            ];
+            
+            apiDiv.innerHTML = '';
+            
+            for (const endpoint of endpoints) {
+                try {
+                    console.log(`Testing ${endpoint}...`);
+                    const response = await fetch(endpoint);
+                    const status = response.ok ? 'success' : 'error';
+                    const text = response.ok ? `✅ ${response.status}` : `❌ ${response.status} ${response.statusText}`;
+                    apiDiv.innerHTML += `<div class="status ${status}">${endpoint}: ${text}</div>`;
+                } catch (error) {
+                    console.error(`API test failed for ${endpoint}:`, error);
+                    apiDiv.innerHTML += `<div class="status error">${endpoint}: ❌ ${error.message}</div>`;
+                }
+            }
+        }
+
+        // Test image loading
+        function testImages() {
+            const imageDiv = document.getElementById('image-test');
+            const imagesContainer = document.getElementById('test-images');
+            
+            imageDiv.innerHTML = '<div class="status loading">Testing image loading...</div>';
+            imagesContainer.innerHTML = '';
+            
+            const testUrls = [
+                'https://via.placeholder.com/300x400/4A90E2/FFFFFF?text=Test+Fallback',
+                'https://m.media-amazon.com/images/I/71dRnPua-KL._SL500_.jpg',
+                '/api/image-proxy?url=' + encodeURIComponent('https://m.media-amazon.com/images/I/71dRnPua-KL._SL500_.jpg')
+            ];
+            
+            testUrls.forEach((url, index) => {
+                const img = document.createElement('img');
+                img.className = 'test-image loading';
+                img.alt = `Test image ${index + 1}`;
+                
+                const label = document.createElement('div');
+                label.textContent = `Test ${index + 1}: ${url.substring(0, 50)}...`;
+                
+                img.onload = () => {
+                    img.classList.remove('loading');
+                    img.classList.add('loaded');
+                    console.log(`✅ Image ${index + 1} loaded successfully`);
+                };
+                
+                img.onerror = () => {
+                    img.classList.remove('loading');
+                    console.error(`❌ Image ${index + 1} failed to load`);
+                };
+                
+                img.src = url;
+                
+                const container = document.createElement('div');
+                container.appendChild(label);
+                container.appendChild(img);
+                imagesContainer.appendChild(container);
+            });
+            
+            setTimeout(() => {
+                imageDiv.innerHTML = '<div class="status success">Image loading test completed - check console for results</div>';
+            }, 5000);
+        }
+
+        // Initialize
+        checkEnvironment();
+        console.log('Debug page initialized');
+        
+        // Auto-test after page load
+        setTimeout(() => {
+            console.log('Starting auto-tests...');
+            testAPIs();
+            setTimeout(testImages, 2000);
+        }, 1000);
+    </script>
+</body>
+</html>

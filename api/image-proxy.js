@@ -17,25 +17,66 @@ export default async function handler(req, res) {
     }
 
     // Validate it's an Amazon image URL for security
-    if (!url.includes('amazon.com') && !url.includes('amazonaws.com')) {
+    if (!url.includes('amazon.com') && !url.includes('amazonaws.com') && !url.includes('m.media-amazon')) {
       return res.status(403).json({ error: 'Only Amazon image URLs allowed' });
     }
 
     console.log('Proxying image:', url);
 
-    // Fetch the image with proper headers to avoid blocking
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    // Try multiple user agents and retry logic
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15'
+    ];
 
-    if (!response.ok) {
-      console.error(`Failed to fetch image: ${response.status}`);
-      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    let response;
+    let lastError;
+
+    // Try up to 3 different user agents
+    for (let i = 0; i < Math.min(3, userAgents.length); i++) {
+      try {
+        const userAgent = userAgents[i];
+        console.log(`Attempt ${i + 1} with user agent: ${userAgent.substring(0, 50)}...`);
+        
+        response = await fetch(url, {
+          headers: {
+            'User-Agent': userAgent,
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'cross-site',
+            'Referer': 'https://www.amazon.com/'
+          },
+          timeout: 10000 // 10 second timeout
+        });
+
+        if (response.ok) {
+          console.log(`✅ Success with attempt ${i + 1}`);
+          break;
+        } else {
+          lastError = `HTTP ${response.status}: ${response.statusText}`;
+          console.log(`❌ Attempt ${i + 1} failed: ${lastError}`);
+        }
+      } catch (error) {
+        lastError = error.message;
+        console.log(`❌ Attempt ${i + 1} error: ${lastError}`);
+        
+        // Add delay between retries
+        if (i < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        }
+      }
+    }
+
+    if (!response || !response.ok) {
+      console.error(`All attempts failed. Last error: ${lastError}`);
+      return res.status(404).json({ error: 'Failed to fetch image after multiple attempts', details: lastError });
     }
 
     const contentType = response.headers.get('content-type') || 'image/jpeg';

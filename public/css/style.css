@@ -902,11 +902,44 @@ body {
     transform: translateY(-2px);
 }
 
+/* Simplified Image Container */
+.simple-image-container {
+    width: 100%;
+    height: 240px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
 .cover-image {
     width: 100%;
     height: 240px;
     object-fit: contain;
     background: var(--bg-secondary);
+    transition: opacity 0.4s ease-in-out;
+}
+
+.cover-image.loading {
+    opacity: 0.7;
+    filter: blur(1px);
+}
+
+.cover-image.loaded {
+    opacity: 1;
+    filter: none;
+}
+
+.cover-image.fallback {
+    opacity: 0.9;
+    filter: none;
+}
+
+.cover-image.timeout {
+    opacity: 0.8;
+    filter: grayscale(0.2);
 }
 
 .cover-info {

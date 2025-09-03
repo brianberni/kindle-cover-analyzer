@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Loading Fix</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .test-image {
+            width: 200px;
+            height: 280px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-image.loading {
+            opacity: 0.7;
+            filter: blur(1px);
+        }
+        
+        .test-image.loaded {
+            opacity: 1;
+            filter: none;
+            border-color: #22c55e;
+        }
+        
+        .test-image.fallback {
+            opacity: 0.9;
+            filter: none;
+            border-color: #f59e0b;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px;
+            display: inline-block;
+        }
+        
+        .status.success { background: #d1fae5; color: #047857; }
+        .status.warning { background: #fef3c7; color: #92400e; }
+        .status.error { background: #fee2e2; color: #b91c1c; }
+    </style>
+</head>
+<body>
+    <h1>Image Loading Fix Test</h1>
+    <p>Testing the new image loading system without infinite loops</p>
+    
+    <div class="test-info">
+        <h3>Test Results</h3>
+        <div id="test-results">
+            <div class="status">Starting tests...</div>
+        </div>
+    </div>
+    
+    <div class="test-container" id="test-images">
+        <!-- Test images will be added here -->
+    </div>
+    
+    <script>
+        class ImageTester {
+            constructor() {
+                this.results = document.getElementById('test-results');
+                this.container = document.getElementById('test-images');
+                this.logResults = [];
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning';
+                this.results.innerHTML += `<div class="status ${statusClass}">[${timestamp}] ${message}</div>`;
+                this.logResults.push({ timestamp, message, type });
+                console.log(`[${timestamp}] ${message}`);
+            }
+            
+            createLocalFallbackSVG(title, author) {
+                const safeTitle = (title || 'Book').replace(/[<>&"']/g, '').substring(0, 25);
+                const safeAuthor = (author || 'Unknown Author').replace(/[<>&"']/g, '').substring(0, 20);
+                const colorScheme = { bg: '4A90E2', text: 'FFFFFF' };
+                
+                const svg = `
+                    <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="100%" height="100%" fill="#${colorScheme.bg}"/>
+                        <rect x="20" y="30" width="260" height="340" fill="none" stroke="#${colorScheme.text}" stroke-width="2" rx="8"/>
+                        <text x="150" y="180" text-anchor="middle" fill="#${colorScheme.text}" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
+                            <tspan x="150" dy="0">${safeTitle}</tspan>
+                            <tspan x="150" dy="30">by ${safeAuthor}</tspan>
+                        </text>
+                        <rect x="50" y="300" width="200" height="4" fill="#${colorScheme.text}" opacity="0.3"/>
+                        <text x="150" y="350" text-anchor="middle" fill="#${colorScheme.text}" font-family="Arial, sans-serif" font-size="12" opacity="0.7">
+                            Cover Not Available
+                        </text>
+                    </svg>
+                `.trim();
+                
+                return `data:image/svg+xml;base64,${btoa(svg)}`;
+            }
+            
+            testImage(src, label, shouldFail = false) {
+                return new Promise((resolve) => {
+                    const img = document.createElement('img');
+                    img.className = 'test-image loading';
+                    img.alt = label;
+                    
+                    const wrapper = document.createElement('div');
+                    wrapper.style.textAlign = 'center';
+                    
+                    const labelEl = document.createElement('p');
+                    labelEl.textContent = label;
+                    labelEl.style.margin = '10px 0 5px 0';
+                    
+                    let finished = false;
+                    let timeoutId;
+                    
+                    img.onload = () => {
+                        if (finished) return;
+                        finished = true;
+                        clearTimeout(timeoutId);
+                        
+                        img.classList.remove('loading');
+                        img.classList.add('loaded');
+                        
+                        const result = shouldFail ? 'warning' : 'success';
+                        const message = shouldFail 
+                            ? `${label}: Loaded unexpectedly (should have failed)`
+                            : `${label}: Loaded successfully`;
+                        this.log(message, result);
+                        resolve(result);
+                    };
+                    
+                    img.onerror = () => {
+                        if (finished) return;
+                        finished = true;
+                        clearTimeout(timeoutId);
+                        
+                        img.classList.remove('loading');
+                        img.classList.add('fallback');
+                        
+                        const result = shouldFail ? 'success' : 'error';
+                        const message = shouldFail 
+                            ? `${label}: Failed as expected`
+                            : `${label}: Failed to load`;
+                        this.log(message, result);
+                        resolve(result);
+                    };
+                    
+                    // 5 second timeout
+                    timeoutId = setTimeout(() => {
+                        if (!finished) {
+                            finished = true;
+                            img.classList.remove('loading');
+                            img.classList.add('fallback');
+                            this.log(`${label}: Timeout`, 'warning');
+                            resolve('warning');
+                        }
+                    }, 5000);
+                    
+                    img.src = src;
+                    wrapper.appendChild(labelEl);
+                    wrapper.appendChild(img);
+                    this.container.appendChild(wrapper);
+                });
+            }
+            
+            async runTests() {
+                this.log('Starting image loading tests...', 'info');
+                
+                const tests = [
+                    {
+                        src: this.createLocalFallbackSVG('Test Book 1', 'Test Author'),
+                        label: 'Local SVG Fallback',
+                        shouldFail: false
+                    },
+                    {
+                        src: 'https://httpstat.us/404',
+                        label: 'Broken URL (should fail)',
+                        shouldFail: true
+                    },
+                    {
+                        src: 'https://via.placeholder.com/300x400',
+                        label: 'Via Placeholder (may fail)',
+                        shouldFail: false
+                    },
+                    {
+                        src: '/api/image-proxy?url=' + encodeURIComponent('https://httpstat.us/404'),
+                        label: 'Proxy with broken URL',
+                        shouldFail: true
+                    }
+                ];
+                
+                const results = [];
+                for (const test of tests) {
+                    const result = await this.testImage(test.src, test.label, test.shouldFail);
+                    results.push(result);
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Delay between tests
+                }
+                
+                const successCount = results.filter(r => r === 'success').length;
+                this.log(`Tests completed: ${successCount}/${tests.length} successful`, 'info');
+                
+                return results;
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            const tester = new ImageTester();
+            await tester.runTests();
+        });
+    </script>
+</body>
+</html>

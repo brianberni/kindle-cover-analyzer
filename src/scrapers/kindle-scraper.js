@@ -142,7 +142,7 @@ class KindleScraper {
         throw new Error(`Invalid response from Amazon - expected HTML string`);
       }
     } catch (error) {
-      console.error(`Scraping failed:`, error.response?.data || error.message);
+      console.error(`Direct Amazon scraping failed:`, error.response?.data || error.message);
       
       // Log detailed error information for debugging
       if (error.response) {
@@ -151,24 +151,20 @@ class KindleScraper {
         console.error('Response data:', JSON.stringify(error.response.data, null, 2));
       }
       
-      // Log job ID if available for Oxylabs support
-      if (error.response?.data?.job_id) {
-        console.error(`Oxylabs Job ID: ${error.response.data.job_id}`);
-        console.error(`Use this Job ID when contacting Oxylabs support about Amazon URL restrictions`);
-      }
-      
-      // Check if credentials are the issue
+      // Check if credentials are the issue (for Zyte proxy)
       if (error.response?.status === 401) {
-        console.error('❌ Authentication failed - check Oxylabs credentials');
+        console.error('❌ Authentication failed - check Zyte API key');
       } else if (error.response?.status === 400) {
         console.error('❌ Bad request - check payload format');
+      } else if (error.response?.status === 403) {
+        console.error('❌ Access denied - Amazon may be blocking requests');
       }
       
-      console.log(`❌ Oxylabs failed for ${category} - Using enhanced fallback data`);
+      console.log(`❌ Direct Amazon scraping failed for ${category} - Using enhanced fallback data`);
       
       // Instead of throwing, return realistic fallback data based on current bestsellers
-      console.log(`Oxylabs timeout/failure - Using curated ${category} bestsellers data`);
-      console.log(`Note: These are current popular ${category} titles, not live Amazon scraping due to timeout constraints`);
+      console.log(`Amazon scraping timeout/failure - Using curated ${category} bestsellers data`);
+      console.log(`Note: These are current popular ${category} titles, not live Amazon scraping due to blocking/timeout constraints`);
       return this.generateEnhancedFallbackBooks(category, limit);
     }
   }
@@ -413,25 +409,43 @@ class KindleScraper {
     const hasProxy = process.env.ZYTE_API_KEY || (process.env.PROXY_HOST && process.env.PROXY_USER);
     console.log(`Proxy available: ${hasProxy ? 'YES' : 'NO'}`);
     
+    // Randomize request characteristics to avoid detection
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
+    ];
+    
+    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+    const randomDelay = Math.floor(Math.random() * 3000) + 1000; // 1-4 second random delay
+    
+    console.log(`Adding ${randomDelay}ms delay before request to appear more human-like`);
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
+    
     let config = {
       method: 'get',
       url: amazonUrl,
-      timeout: 20000, // 20 second timeout for proxy requests
+      timeout: 25000, // Increased timeout for reliability
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'User-Agent': randomUserAgent,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Language': this.getRandomAcceptLanguage(),
         'Accept-Encoding': 'gzip, deflate, br',
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        'Sec-Ch-Ua': this.getRandomSecChUa(),
         'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Ch-Ua-Platform': this.getRandomPlatform(),
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1',
+        'Connection': 'keep-alive',
+        'DNT': Math.random() > 0.5 ? '1' : '0' // Randomly include Do Not Track
       }
     };
     
@@ -487,6 +501,33 @@ class KindleScraper {
       }
       throw error;
     }
+  }
+
+  getRandomAcceptLanguage() {
+    const languages = [
+      'en-US,en;q=0.9',
+      'en-US,en;q=0.9,es;q=0.8',
+      'en-US,en;q=0.8',
+      'en-GB,en;q=0.9',
+      'en-US,en;q=0.9,fr;q=0.8',
+      'en-US,en;q=0.7'
+    ];
+    return languages[Math.floor(Math.random() * languages.length)];
+  }
+
+  getRandomSecChUa() {
+    const uas = [
+      '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+      '"Chromium";v="121", "Not A(Brand";v="99", "Google Chrome";v="121"',
+      '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      '"Microsoft Edge";v="121", "Not)A;Brand";v="24", "Chromium";v="121"'
+    ];
+    return uas[Math.floor(Math.random() * uas.length)];
+  }
+
+  getRandomPlatform() {
+    const platforms = ['"Windows"', '"macOS"', '"Linux"'];
+    return platforms[Math.floor(Math.random() * platforms.length)];
   }
 
   async makeHttpRequest(payload) {

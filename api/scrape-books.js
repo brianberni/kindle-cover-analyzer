@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const KindleScraper = await loadKindleScraper();
     const scraper = new KindleScraper();
     
-    // This will use real Oxylabs scraping or fall back to demo data if scraping fails
+    // This will use direct Amazon scraping with Zyte proxy or fall back to curated data if scraping fails
     const books = await scraper.scrapeCategory(category, parseInt(limit));
     
     console.log('Scraping result - first book:', books[0]);
@@ -41,14 +41,20 @@ export default async function handler(req, res) {
     const transformedBooks = books.map((book, index) => {
       let imageUrl = book.coverUrl;
       
-      // Use direct Amazon image URLs (they allow CORS for images)
-      if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com') || imageUrl.includes('m.media-amazon'))) {
-        // Direct Amazon image URLs work fine without proxy
-        console.log(`✅ Using direct Amazon image: ${imageUrl.substring(0, 60)}...`);
+      // For fallback data, accept the curated books as they have been pre-validated
+      const isFallbackData = book.amazonUrl?.includes('fallback');
+      
+      if (isFallbackData) {
+        console.log(`✅ Using fallback book with curated image: ${book.title}`);
       } else {
-        console.error(`❌ Book has no valid Amazon image: ${book.title}`);
-        // Don't include books without real Amazon images
-        return null;
+        // For real Amazon data, validate image URLs
+        if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com') || imageUrl.includes('m.media-amazon'))) {
+          console.log(`✅ Using direct Amazon image: ${imageUrl.substring(0, 60)}...`);
+        } else {
+          console.error(`❌ Book has no valid Amazon image: ${book.title}`);
+          // Don't include books without real Amazon images
+          return null;
+        }
       }
       
       return {
@@ -66,10 +72,14 @@ export default async function handler(req, res) {
         isBestSeller: book.isBestSeller,
         trendingScore: book.trendingScore
       };
-    }).filter(book => book !== null); // Remove books without valid Amazon images
+    }).filter(book => book !== null); // Remove books without valid images (except fallback data)
     
     console.log('Sample transformed book:', transformedBooks[0]);
-    console.log(`✅ Returning ${transformedBooks.length} books with REAL Amazon images`);
+    console.log(`✅ Returning ${transformedBooks.length} books with validated images`);
+    
+    if (transformedBooks.length === 0) {
+      throw new Error(`No books found for ${category} category. This could be due to Amazon blocking the request or an issue with image validation.`);
+    }
     
     console.log(`Successfully scraped ${transformedBooks.length} books from ${category}`);
     

@@ -2,14 +2,72 @@ class KindleCoverAnalyzer {
     constructor() {
         this.apiBase = '/api';
         this.currentView = 'dashboard';
+        this.errorCount = 0;
+        this.maxErrors = 10;
         this.init();
     }
 
     init() {
-        this.setupNavigation();
-        this.loadCategories();
-        this.bindEvents();
-        this.initAnimations();
+        try {
+            this.setupErrorHandling();
+            this.setupNavigation();
+            this.loadCategories();
+            this.bindEvents();
+            this.initAnimations();
+            console.log('✅ Kindle Cover Analyzer initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize app:', error);
+            this.showCriticalError('Failed to initialize application');
+        }
+    }
+
+    setupErrorHandling() {
+        // Global error handler
+        window.addEventListener('error', (event) => {
+            this.handleGlobalError(event.error);
+        });
+
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', (event) => {
+            this.handleGlobalError(event.reason);
+        });
+    }
+
+    handleGlobalError(error) {
+        this.errorCount++;
+        console.error(`Global error (${this.errorCount}/${this.maxErrors}):`, error);
+        
+        if (this.errorCount >= this.maxErrors) {
+            this.showCriticalError('Too many errors detected. Please refresh the page.');
+            return;
+        }
+        
+        // Try to recover from the error
+        try {
+            this.hideLoading();
+            this.showError('An unexpected error occurred. Please try again.');
+        } catch (recoveryError) {
+            console.error('Failed to recover from error:', recoveryError);
+        }
+    }
+
+    showCriticalError(message) {
+        document.body.innerHTML = `
+            <div style="
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: #fee2e2; display: flex; align-items: center; justify-content: center;
+                font-family: Inter, sans-serif; z-index: 10000;
+            ">
+                <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; max-width: 500px;">
+                    <h1 style="color: #dc2626; margin-bottom: 20px;">⚠️ Critical Error</h1>
+                    <p style="color: #374151; margin-bottom: 30px;">${message}</p>
+                    <button onclick="window.location.reload()" style="
+                        background: #3b82f6; color: white; border: none; padding: 12px 24px;
+                        border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500;
+                    ">Refresh Page</button>
+                </div>
+            </div>
+        `;
     }
 
     setupNavigation() {
@@ -284,11 +342,12 @@ class KindleCoverAnalyzer {
             }
             
             console.log('About to show loading');
-            this.showLoading();
+            this.showLoading('Initializing Amazon scraper...');
             console.log('Loading shown, proceeding with analysis');
 
         try {
             // Step 1: Scrape books
+            this.updateLoadingMessage('Scraping Amazon bestsellers...');
             console.log(`Scraping books for category: ${category}`);
             const scrapeResponse = await fetch(`${this.apiBase}/scrape-books?category=${category}&limit=${limit}`);
             const scrapeData = await scrapeResponse.json();
@@ -302,6 +361,9 @@ class KindleCoverAnalyzer {
                 throw new Error('No books found for this category');
             }
 
+            this.updateLoadingMessage(`Found ${scrapeData.books.length} books, analyzing covers...`);
+            this.updateProgress(60);
+            
             // Step 2: Analyze covers
             const analysisResponse = await fetch(`${this.apiBase}/simple-analyze`, {
                 method: 'POST',
@@ -317,13 +379,19 @@ class KindleCoverAnalyzer {
                 throw new Error(analysisData.error || 'Failed to analyze covers');
             }
 
+            this.updateLoadingMessage('Processing trends and insights...');
+            this.updateProgress(90);
+
             console.log('Analysis data received:', analysisData); // Debug log
             
             if (!analysisData || !analysisData.trends || !analysisData.analyses) {
                 throw new Error('Invalid analysis response format');
             }
 
-            this.displayResults(analysisData, category);
+            this.updateProgress(100);
+            setTimeout(() => {
+                this.displayResults(analysisData, category);
+            }, 500); // Small delay to show completed progress
 
         } catch (error) {
             console.error('Analysis failed:', error);
@@ -618,6 +686,66 @@ class KindleCoverAnalyzer {
             .replace(/\b\w/g, l => l.toUpperCase());
     }
 
+    getProxiedImageUrl(originalUrl) {
+        // If it's already a placeholder or non-Amazon URL, return as-is
+        if (!originalUrl || 
+            originalUrl.includes('placeholder') || 
+            originalUrl.includes('via.placeholder') ||
+            (!originalUrl.includes('amazon') && !originalUrl.includes('amazonaws'))) {
+            return originalUrl;
+        }
+
+        // Route Amazon images through our proxy
+        return `${this.apiBase}/image-proxy?url=${encodeURIComponent(originalUrl)}`;
+    }
+
+    getFallbackImageUrl(title, author) {
+        // Create a local SVG fallback to avoid external dependency failures
+        return this.createLocalFallbackSVG(title, author);
+    }
+
+    createLocalFallbackSVG(title, author) {
+        const safeTitle = (title || 'Book').replace(/[<>&"']/g, '').substring(0, 25);
+        const safeAuthor = (author || 'Unknown Author').replace(/[<>&"']/g, '').substring(0, 20);
+        const colorScheme = this.getColorSchemeForTitle(title || 'default');
+        
+        // Create an inline SVG data URL - this will never fail to load
+        const svg = `
+            <svg width="300" height="400" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="#${colorScheme.bg}"/>
+                <rect x="20" y="30" width="260" height="340" fill="none" stroke="#${colorScheme.text}" stroke-width="2" rx="8"/>
+                <text x="150" y="180" text-anchor="middle" fill="#${colorScheme.text}" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
+                    <tspan x="150" dy="0">${safeTitle}</tspan>
+                    <tspan x="150" dy="30">by ${safeAuthor}</tspan>
+                </text>
+                <rect x="50" y="300" width="200" height="4" fill="#${colorScheme.text}" opacity="0.3"/>
+                <text x="150" y="350" text-anchor="middle" fill="#${colorScheme.text}" font-family="Arial, sans-serif" font-size="12" opacity="0.7">
+                    Cover Not Available
+                </text>
+            </svg>
+        `.trim();
+        
+        return `data:image/svg+xml;base64,${btoa(svg)}`;
+    }
+
+    getColorSchemeForTitle(title) {
+        // Generate consistent color schemes based on title
+        const schemes = [
+            { bg: '4A90E2', text: 'FFFFFF' }, // Blue
+            { bg: '7ED321', text: '333333' }, // Green  
+            { bg: 'F5A623', text: '333333' }, // Orange
+            { bg: 'D0021B', text: 'FFFFFF' }, // Red
+            { bg: '9013FE', text: 'FFFFFF' }, // Purple
+            { bg: '50E3C2', text: '333333' }, // Teal
+            { bg: 'B8E986', text: '333333' }, // Light Green
+            { bg: 'F8E71C', text: '333333' }, // Yellow
+        ];
+        
+        // Use title hash to consistently pick a color scheme
+        const hash = title.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        return schemes[hash % schemes.length];
+    }
+
     displayCovers(analyses) {
         const coversGrid = document.getElementById('coversGrid');
         if (!coversGrid) return;
@@ -628,6 +756,11 @@ class KindleCoverAnalyzer {
             const coverCard = this.createCoverCard(book);
             coversGrid.appendChild(coverCard);
         });
+
+        // Load images after DOM creation to prevent glitching
+        setTimeout(() => {
+            this.loadCoverImages();
+        }, 100);
     }
 
     createCoverCard(book) {
@@ -637,10 +770,16 @@ class KindleCoverAnalyzer {
         const analysis = book.analysis || {};
         const colors = analysis.colors || {};
 
+        // Route Amazon images through our proxy to bypass CORS
+        const imageUrl = this.getProxiedImageUrl(book.coverUrl);
+        const fallbackUrl = this.getFallbackImageUrl(book.title, book.author);
+
         card.innerHTML = `
-            <img src="${book.coverUrl}" alt="${book.title}" class="cover-image" 
-                 onerror="console.error('Image failed to load:', '${book.coverUrl}'); this.src='https://via.placeholder.com/300x400/cccccc/666666?text=Cover+Not+Available';"
-                 onload="console.log('Image loaded successfully:', '${book.coverUrl}')">
+            <div class="simple-image-container">
+                <img src="${fallbackUrl}" alt="${book.title}" class="cover-image loading" 
+                     data-original-src="${imageUrl}"
+                     data-fallback-src="${fallbackUrl}">
+            </div>
             <div class="cover-info">
                 <div class="cover-rank">Rank #${book.rank}</div>
                 <div class="cover-title">${book.title}</div>
@@ -670,6 +809,93 @@ class KindleCoverAnalyzer {
         `;
 
         return card;
+    }
+
+    loadCoverImages() {
+        try {
+            const images = document.querySelectorAll('.cover-image.loading');
+            console.log(`Loading ${images.length} cover images`);
+            
+            images.forEach((img, index) => {
+                // Stagger image loading to prevent overwhelming the browser
+                setTimeout(() => {
+                    try {
+                        this.loadSingleImage(img);
+                    } catch (error) {
+                        console.error('Error loading individual image:', error);
+                        // Remove loading class to prevent stuck state
+                        img.classList.remove('loading');
+                        img.classList.add('fallback');
+                    }
+                }, index * 200); // 200ms delay between each image
+            });
+        } catch (error) {
+            console.error('Error in loadCoverImages:', error);
+        }
+    }
+
+    loadSingleImage(img) {
+        const originalSrc = img.getAttribute('data-original-src');
+        const fallbackSrc = img.getAttribute('data-fallback-src');
+        
+        // Circuit breaker: prevent infinite loading attempts
+        if (img.hasAttribute('data-load-attempted')) {
+            console.log('🔒 Image loading already attempted, skipping:', originalSrc?.substring(0, 60) + '...');
+            return;
+        }
+        img.setAttribute('data-load-attempted', 'true');
+        
+        if (!originalSrc) {
+            img.classList.remove('loading');
+            return;
+        }
+
+        // Create a new image to test loading
+        const testImg = new Image();
+        let loadingFinished = false;
+        
+        testImg.onload = () => {
+            if (loadingFinished) return;
+            loadingFinished = true;
+            
+            // Success - use the original image
+            img.src = originalSrc;
+            img.classList.remove('loading');
+            img.classList.add('loaded');
+            console.log('✅ Image loaded successfully:', originalSrc.substring(0, 60) + '...');
+        };
+        
+        testImg.onerror = () => {
+            if (loadingFinished) return;
+            loadingFinished = true;
+            
+            // Failed - image already has fallback as src, just update classes
+            img.classList.remove('loading');
+            img.classList.add('fallback');
+            console.log('❌ Image failed, using fallback:', originalSrc.substring(0, 60) + '...');
+        };
+        
+        // Set a timeout for slow loading images
+        setTimeout(() => {
+            if (!loadingFinished && img.classList.contains('loading')) {
+                loadingFinished = true;
+                img.classList.remove('loading');
+                img.classList.add('timeout');
+                console.log('⏱️ Image loading timeout, using fallback:', originalSrc.substring(0, 60) + '...');
+            }
+        }, 8000); // 8 second timeout
+        
+        // Start loading
+        try {
+            testImg.src = originalSrc;
+        } catch (error) {
+            if (!loadingFinished) {
+                loadingFinished = true;
+                img.classList.remove('loading');
+                img.classList.add('fallback');
+                console.error('❌ Error setting image src:', error);
+            }
+        }
     }
     
     renderRatingAndReviews(book) {
@@ -811,10 +1037,48 @@ class KindleCoverAnalyzer {
         return html;
     }
 
-    showLoading() {
-        document.getElementById('loading').classList.remove('hidden');
+    showLoading(message = 'Loading...') {
+        const loadingEl = document.getElementById('loading');
+        const progressTextEl = loadingEl.querySelector('.progress-text');
+        
+        if (progressTextEl) {
+            progressTextEl.textContent = message;
+        }
+        
+        loadingEl.classList.remove('hidden');
         document.getElementById('results').classList.add('hidden');
         document.getElementById('error').classList.add('hidden');
+        
+        // Start progress animation
+        this.animateProgress();
+    }
+
+    updateLoadingMessage(message) {
+        const progressTextEl = document.querySelector('#loading .progress-text');
+        if (progressTextEl) {
+            progressTextEl.textContent = message;
+        }
+    }
+
+    animateProgress() {
+        const progressFill = document.querySelector('.progress-fill');
+        if (progressFill) {
+            // Reset progress
+            progressFill.style.width = '0%';
+            progressFill.style.transition = 'width 0.5s ease-in-out';
+            
+            // Animate to show progress
+            setTimeout(() => {
+                progressFill.style.width = '30%';
+            }, 100);
+        }
+    }
+
+    updateProgress(percentage) {
+        const progressFill = document.querySelector('.progress-fill');
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
     }
 
     hideLoading() {
