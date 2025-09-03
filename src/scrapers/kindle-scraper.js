@@ -315,19 +315,13 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use Web Scraper API with direct bestseller page URL for exact results
+    // Use Amazon source with direct bestseller page URL for exact results
     const bestsellerUrl = this.getBestsellerUrl(category);
     const payload = {
-      source: 'universal',
+      source: 'amazon',
       url: bestsellerUrl,
       parse: false, // We'll parse the HTML ourselves to get exact bestseller structure
-      render: 'html',
-      context: [
-        {
-          key: 'currency', 
-          value: 'USD'
-        }
-      ]
+      render: 'html'
     };
     
     console.log(`Oxylabs bestseller request for ${category} (ID: ${categoryInfo.id})`);
