@@ -138,8 +138,13 @@ class KindleScraper {
         // Handle structured data from parse: true
         let books = [];
         
-        if (result.content && result.content.results && result.content.results.organic) {
-          // Standard amazon_search response format
+        if (result.content && result.content.bestsellers) {
+          // Amazon bestsellers response format
+          console.log('Using parsed results from amazon_bestsellers');
+          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
+          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
+        } else if (result.content && result.content.results && result.content.results.organic) {
+          // Standard amazon_search response format (fallback)
           console.log('Using parsed results from amazon_search');
           console.log(`Found ${result.content.results.organic.length} search results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
@@ -305,19 +310,14 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use improved search approach with bestseller-focused queries
+    // Use direct Amazon bestseller page URLs for more accurate results
+    const bestsellerUrl = this.getBestsellerUrl(category);
     const payload = {
-      source: 'amazon_search',
-      query: this.getCategoryQuery(category),
+      source: 'amazon_bestsellers',
+      url: bestsellerUrl,
       domain: 'com',
-      start_page: 1,
-      pages: 1,
       parse: true,
       context: [
-        {
-          key: 'sort_by',
-          value: 'featured' // Amazon's featured results prioritize bestsellers
-        },
         {
           key: 'currency', 
           value: 'USD'
@@ -325,7 +325,7 @@ class KindleScraper {
       ]
     };
     
-    console.log(`Oxylabs search for ${category}: "${payload.query}"`);
+    console.log(`Oxylabs bestseller page for ${category}: "${bestsellerUrl}"`);
     console.log('Oxylabs request:', JSON.stringify(payload, null, 2));
     
     return await this.makeHttpRequest(payload);
@@ -452,62 +452,16 @@ class KindleScraper {
     return queries[category] || `kindle ${category.replace(/-/g, ' ')} bestsellers`;
   }
 
-  parseAmazonBestsellerResults(bestsellerItems, limit) {
-    const books = [];
+  getBestsellerUrl(category) {
+    const categoryInfo = this.categories[category];
+    if (!categoryInfo) {
+      throw new Error(`Unknown category: ${category}`);
+    }
     
-    bestsellerItems.slice(0, limit).forEach((item, index) => {
-      try {
-        // Extract data from bestseller page structure
-        const title = item.title || item.name || '';
-        const author = item.author || item.by || item.manufacturer || '';
-        const price = item.price ? `$${item.price}` : item.price_str || '';
-        const rating = item.rating || item.stars || '';
-        
-        // Try multiple possible image field names from bestseller pages
-        const imageUrl = item.image || 
-                         item.thumbnail || 
-                         item.cover_image ||
-                         item.url_image ||
-                         item.img_url ||
-                         '';
-        
-        const url = item.url || item.link || '';
-        const rank = item.rank || item.position || (index + 1);
-        
-        console.log(`Parsing bestseller item ${index + 1}:`, {
-          title: title.substring(0, 50),
-          author,
-          price,
-          hasImage: !!imageUrl,
-          imageUrl: imageUrl ? imageUrl.substring(0, 60) + '...' : 'NO IMAGE',
-          rank
-        });
-        
-        // ONLY accept books with real Amazon images
-        if (title && imageUrl && (imageUrl.includes('amazon') || imageUrl.includes('ssl-images-amazon') || imageUrl.includes('m.media-amazon'))) {
-          books.push({
-            rank: rank,
-            title: title.trim(),
-            author: author ? author.trim() : '',
-            coverUrl: this.getHighResImage(imageUrl),
-            price: price,
-            rating: rating ? `${rating} out of 5 stars` : '',
-            amazonUrl: url,
-            reviewsCount: item.reviews_count || 0,
-            isBestSeller: true, // All items from bestseller page are bestsellers
-            trendingScore: 100 - (index * 2) // Higher score for higher rank
-          });
-          console.log(`✅ Added bestseller with real Amazon image: ${title}`);
-        } else {
-          console.log(`❌ Skipped bestseller - missing image or not Amazon: ${title}`);
-        }
-      } catch (error) {
-        console.error('Error parsing bestseller item:', error);
-      }
-    });
-    
-    return books;
+    // Generate direct Amazon bestseller page URL
+    return `https://www.amazon.com/Best-Sellers-Kindle-Store/zgbs/digital-text/${categoryInfo.id}`;
   }
+
 
   parseAmazonBestsellerResults(bestsellerResults, limit) {
     const books = [];
