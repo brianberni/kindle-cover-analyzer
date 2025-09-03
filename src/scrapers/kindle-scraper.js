@@ -135,11 +135,16 @@ class KindleScraper {
         const result = response.data.results[0];
         console.log('Result keys:', Object.keys(result));
         
-        // Handle structured data from parse: true
+        // Handle raw HTML from bestseller page
         let books = [];
         
-        if (result.content && result.content.results && result.content.results.organic) {
-          // Amazon search response format with bestsellers sorting
+        if (result.content && typeof result.content === 'string') {
+          // Raw HTML from bestseller page
+          console.log('Parsing raw HTML from bestseller page');
+          console.log(`HTML length: ${result.content.length} characters`);
+          books = this.parseBooks(result.content, limit);
+        } else if (result.content && result.content.results && result.content.results.organic) {
+          // Amazon search response format (fallback)
           console.log('Using parsed results from amazon_search (bestsellers sorted)');
           console.log(`Found ${result.content.results.organic.length} search results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
@@ -310,18 +315,14 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use Amazon search with category ID and bestsellers sort for accurate results
+    // Use Web Scraper API with direct bestseller page URL for exact results
+    const bestsellerUrl = this.getBestsellerUrl(category);
     const payload = {
-      source: 'amazon_search',
-      query: this.getCategoryQuery(category), // Use search query for the category
-      domain: 'com',
-      parse: true,
-      sort_by: 'bestsellers', // This sorts by bestsellers within the category
+      source: 'universal',
+      url: bestsellerUrl,
+      parse: false, // We'll parse the HTML ourselves to get exact bestseller structure
+      render: 'html',
       context: [
-        {
-          key: 'category_id',
-          value: categoryInfo.id
-        },
         {
           key: 'currency', 
           value: 'USD'
@@ -670,53 +671,100 @@ class KindleScraper {
     const $ = cheerio.load(html);
     const books = [];
 
-    // Parse bestsellers page structure
-    $('#gridItemRoot .zg_itemImmersion, .zg-item-immersion').slice(0, limit).each((index, element) => {
+    console.log('Looking for bestseller elements in HTML...');
+    
+    // Try multiple selectors for Amazon bestseller pages (they change structure frequently)
+    const selectors = [
+      '#gridItemRoot .zg_itemImmersion',
+      '#gridItemRoot .zg-item-immersion', 
+      '[data-testid="product-tile"]',
+      '.s-result-item',
+      '.zg-ordered-list .zg-item-immersion',
+      '.zg_itemRow',
+      '.a-carousel-card'
+    ];
+    
+    let $elements = $();
+    for (const selector of selectors) {
+      $elements = $(selector);
+      if ($elements.length > 0) {
+        console.log(`Found ${$elements.length} elements with selector: ${selector}`);
+        break;
+      }
+    }
+    
+    if ($elements.length === 0) {
+      console.log('No bestseller elements found, trying fallback parsing...');
+      // Log some of the HTML structure for debugging
+      console.log('Page title:', $('title').text());
+      console.log('Available selectors:', Object.keys($._root.children).slice(0, 10));
+    }
+
+    $elements.slice(0, limit).each((index, element) => {
       const $el = $(element);
       
       try {
-        // Extract rank from bestsellers page
-        const rank = parseInt($el.find('.zg_rankNumber').text().replace('#', '').trim()) || (index + 1);
+        // Extract rank - try multiple approaches
+        let rank = parseInt($el.find('.zg_rankNumber, .zg-rank, [data-testid="rank"]').text().replace(/[^\d]/g, '')) || (index + 1);
         
-        // Extract title - bestsellers pages have different structure
-        const title = $el.find('.p13n-sc-truncated').text().trim() ||
-                     $el.find('a:not(:has(img))').text().trim() ||
-                     $el.find('.a-size-mini .a-link-normal').text().trim();
+        // Extract title - try multiple selectors
+        const title = $el.find('.p13n-sc-truncated, .a-size-mini .a-link-normal, .a-size-base-plus, h3 a, [data-testid="title"]').first().text().trim() ||
+                     $el.find('a:not(:has(img))').first().text().trim();
         
-        // Extract author
-        const author = $el.find('.a-size-small .a-link-child').text().trim() ||
-                      $el.find('.a-row .a-size-small a').text().trim();
+        // Extract author - try multiple selectors
+        const author = $el.find('.a-size-small .a-link-child, .a-row .a-size-small a, [data-testid="author"]').first().text().trim() ||
+                      $el.find('span[class*="author"]').first().text().trim();
         
-        // Extract cover image from bestsellers page
-        const coverUrl = $el.find('img').attr('src') || 
-                        $el.find('img').attr('data-src') ||
-                        $el.find('.imgTagWrapper img').attr('src');
+        // Extract cover image - try multiple approaches
+        const coverUrl = $el.find('img').first().attr('src') || 
+                         $el.find('img').first().attr('data-src') ||
+                         $el.find('.imgTagWrapper img, .s-image').first().attr('src');
         
-        // Extract price from bestsellers page
-        const priceElement = $el.find('.a-price .a-offscreen').first();
+        // Extract price - try multiple selectors
+        const priceElement = $el.find('.a-price .a-offscreen, .a-price-whole, [data-testid="price"]').first();
         const price = priceElement.length ? priceElement.text().trim() : 
-                     $el.find('.a-color-price').text().trim();
+                     $el.find('.a-color-price').first().text().trim();
         
-        // Extract rating
-        const rating = $el.find('.a-icon-alt').text().trim();
+        // Extract rating - try multiple selectors
+        const rating = $el.find('.a-icon-alt, [data-testid="rating"]').first().text().trim();
+        
+        // Extract additional metadata
+        const amazonUrl = $el.find('a[href]').first().attr('href') || '';
 
-        if (title && coverUrl) {
+        console.log(`Parsing item ${index + 1}:`, {
+          rank,
+          title: title.substring(0, 50),
+          author: author.substring(0, 30),
+          hasImage: !!coverUrl,
+          hasPrice: !!price,
+          hasRating: !!rating
+        });
+
+        // Only include books with real Amazon images and titles
+        if (title && coverUrl && (coverUrl.includes('amazon') || coverUrl.includes('ssl-images-amazon') || coverUrl.includes('m.media-amazon'))) {
           books.push({
             rank,
             title: title.trim(),
-            author: author.trim(),
+            author: author.trim() || 'Unknown Author',
             coverUrl: this.getHighResImage(coverUrl),
-            price: price.trim(),
-            rating: rating.trim()
+            price: price.trim() || 'Price not available',
+            rating: rating.trim() || 'Rating not available',
+            amazonUrl: amazonUrl,
+            reviewsCount: 0, // Could be extracted if needed
+            isBestSeller: true, // All items from bestseller page are bestsellers
+            trendingScore: Math.max(0, 100 - (rank * 2)) // Higher score for better rank
           });
           
-          console.log(`Parsed book ${rank}: ${title} by ${author}`);
+          console.log(`✅ Added bestseller #${rank}: ${title.substring(0, 50)} by ${author}`);
+        } else {
+          console.log(`❌ Skipped item - missing required data: title=${!!title}, image=${!!coverUrl}, isAmazonImage=${coverUrl ? coverUrl.includes('amazon') : false}`);
         }
       } catch (error) {
         console.error(`Error parsing book at index ${index}:`, error);
       }
     });
 
+    console.log(`Parsed ${books.length} books from bestseller page`);
     return books;
   }
 
