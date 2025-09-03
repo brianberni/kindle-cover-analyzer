@@ -409,7 +409,7 @@ class KindleScraper {
     
     console.log(`Direct Amazon request for ${category}: ${amazonUrl}`);
     
-    // Check if proxy credentials are available
+    // Check if proxy credentials are available (Zyte integration active)
     const hasProxy = process.env.ZYTE_API_KEY || (process.env.PROXY_HOST && process.env.PROXY_USER);
     console.log(`Proxy available: ${hasProxy ? 'YES' : 'NO'}`);
     
