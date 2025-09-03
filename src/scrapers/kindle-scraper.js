@@ -135,11 +135,16 @@ class KindleScraper {
         const result = response.data.results[0];
         console.log('Result keys:', Object.keys(result));
         
-        // Handle raw HTML from bestseller page
+        // Handle parsed bestseller data from Oxylabs
         let books = [];
         
-        if (result.content && typeof result.content === 'string') {
-          // Raw HTML from bestseller page
+        if (result.content && result.content.bestsellers) {
+          // Amazon bestsellers parsed response
+          console.log('Using parsed bestsellers from amazon_bestsellers');
+          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
+          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
+        } else if (result.content && typeof result.content === 'string') {
+          // Raw HTML from bestseller page (fallback)
           console.log('Parsing raw HTML from bestseller page');
           console.log(`HTML length: ${result.content.length} characters`);
           books = this.parseBooks(result.content, limit);
@@ -315,13 +320,13 @@ class KindleScraper {
       throw new Error(`Unknown category: ${category}`);
     }
     
-    // Use Amazon source with direct bestseller page URL for exact results
-    const bestsellerUrl = this.getBestsellerUrl(category);
+    // Use amazon_bestsellers source with category ID for reliable results
     const payload = {
-      source: 'amazon',
-      url: bestsellerUrl,
-      parse: false, // We'll parse the HTML ourselves to get exact bestseller structure
-      render: 'html'
+      source: 'amazon_bestsellers',
+      domain: 'com',
+      query: categoryInfo.id,
+      parse: true, // Let Oxylabs parse the bestsellers for us
+      pages: 1
     };
     
     console.log(`Oxylabs bestseller request for ${category} (ID: ${categoryInfo.id})`);
