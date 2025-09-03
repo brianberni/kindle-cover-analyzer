@@ -41,9 +41,10 @@ export default async function handler(req, res) {
     const transformedBooks = books.map((book, index) => {
       let imageUrl = book.coverUrl;
       
-      // ONLY use real Amazon images - proxy them to avoid CORS
-      if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com'))) {
-        imageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+      // Use direct Amazon image URLs (they allow CORS for images)
+      if (imageUrl && (imageUrl.includes('amazon.com') || imageUrl.includes('amazonaws.com') || imageUrl.includes('m.media-amazon'))) {
+        // Direct Amazon image URLs work fine without proxy
+        console.log(`✅ Using direct Amazon image: ${imageUrl.substring(0, 60)}...`);
       } else {
         console.error(`❌ Book has no valid Amazon image: ${book.title}`);
         // Don't include books without real Amazon images

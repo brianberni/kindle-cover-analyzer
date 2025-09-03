@@ -459,8 +459,9 @@ class KindleScraper {
         }
       };
     } else {
-      console.log('⚠️  No proxy configured - Amazon may block this request');
-      console.log('Set ZYTE_API_KEY or PROXY_HOST/PROXY_USER environment variables');
+      console.log('⚠️  No proxy configured - trying direct Amazon request');
+      console.log('Note: Amazon may block this after a few requests');
+      console.log('For reliable access, set ZYTE_API_KEY environment variable');
     }
     
     try {
