@@ -138,9 +138,14 @@ class KindleScraper {
         // Handle parsed bestseller data from Oxylabs
         let books = [];
         
-        if (result.content && result.content.bestsellers) {
-          // Amazon bestsellers parsed response
+        if (result.content && result.content.results) {
+          // Amazon bestsellers parsed response (results array)
           console.log('Using parsed bestsellers from amazon_bestsellers');
+          console.log(`Found ${result.content.results.length} bestseller items`);
+          books = this.parseAmazonBestsellerResults(result.content.results, limit);
+        } else if (result.content && result.content.bestsellers) {
+          // Alternative bestsellers array format
+          console.log('Using bestsellers array from amazon_bestsellers');
           console.log(`Found ${result.content.bestsellers.length} bestseller items`);
           books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
         } else if (result.content && typeof result.content === 'string') {
@@ -153,11 +158,6 @@ class KindleScraper {
           console.log('Using parsed results from amazon_search (bestsellers sorted)');
           console.log(`Found ${result.content.results.organic.length} search results`);
           books = this.parseAmazonSearchResults(result.content.results.organic, limit);
-        } else if (result.content && result.content.bestsellers) {
-          // Amazon bestsellers response format (fallback)
-          console.log('Using parsed results from amazon_bestsellers');
-          console.log(`Found ${result.content.bestsellers.length} bestseller items`);
-          books = this.parseAmazonBestsellerResults(result.content.bestsellers, limit);
         } else if (result.content && result.content.products) {
           // Alternative products array format
           console.log('Found products array, parsing as search results');
