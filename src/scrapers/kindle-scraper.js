@@ -409,27 +409,81 @@ class KindleScraper {
     
     console.log(`Direct Amazon request for ${category}: ${amazonUrl}`);
     
-    const config = {
+    // Check if proxy credentials are available
+    const hasProxy = process.env.ZYTE_API_KEY || (process.env.PROXY_HOST && process.env.PROXY_USER);
+    console.log(`Proxy available: ${hasProxy ? 'YES' : 'NO'}`);
+    
+    let config = {
       method: 'get',
       url: amazonUrl,
-      timeout: 15000, // 15 second timeout
+      timeout: 20000, // 20 second timeout for proxy requests
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1',
       }
     };
     
+    // Add proxy configuration if available
+    if (process.env.ZYTE_API_KEY) {
+      // Use Zyte Smart Proxy Manager
+      console.log('Using Zyte Smart Proxy Manager');
+      config.url = 'http://api.zyte.com:8011';
+      config.headers['Zyte-Api-Key'] = process.env.ZYTE_API_KEY;
+      config.data = {
+        url: amazonUrl,
+        httpResponseHeaders: true,
+        httpResponseBody: true
+      };
+      config.method = 'post';
+    } else if (process.env.PROXY_HOST && process.env.PROXY_USER) {
+      // Use generic HTTP proxy
+      console.log(`Using HTTP proxy: ${process.env.PROXY_HOST}`);
+      config.proxy = {
+        host: process.env.PROXY_HOST,
+        port: parseInt(process.env.PROXY_PORT || '8000'),
+        auth: {
+          username: process.env.PROXY_USER,
+          password: process.env.PROXY_PASS
+        }
+      };
+    } else {
+      console.log('⚠️  No proxy configured - Amazon may block this request');
+      console.log('Set ZYTE_API_KEY or PROXY_HOST/PROXY_USER environment variables');
+    }
+    
     try {
       const response = await axios(config);
-      console.log(`✅ Successfully fetched Amazon page (${response.data.length} chars)`);
-      return { data: response.data };
+      
+      let htmlData;
+      if (process.env.ZYTE_API_KEY) {
+        // Handle Zyte API response
+        htmlData = response.data.httpResponseBody;
+        console.log(`✅ Zyte proxy successful (${htmlData.length} chars)`);
+      } else {
+        htmlData = response.data;
+        console.log(`✅ Direct/proxy request successful (${htmlData.length} chars)`);
+      }
+      
+      return { data: htmlData };
     } catch (error) {
-      console.error('Direct Amazon request failed:', error.message);
+      console.error('Amazon request failed:', error.message);
+      if (error.response?.status === 403) {
+        console.error('❌ Amazon blocked request (403 Forbidden)');
+      } else if (error.response?.status === 503) {
+        console.error('❌ Amazon rate limited (503 Service Unavailable)');
+      }
       throw error;
     }
   }
