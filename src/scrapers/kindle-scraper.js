@@ -163,9 +163,15 @@ class KindleScraper {
           console.log('Found products array, parsing as search results');
           books = this.parseAmazonSearchResults(result.content.products, limit);
         } else {
-          console.log('Unexpected response format');
-          console.log('Response content keys:', Object.keys(result.content || {}));
-          console.log('Response content sample:', JSON.stringify(result.content, null, 2).substring(0, 500));
+          console.log('Unexpected response format - debugging...');
+          console.log('Result keys:', Object.keys(result));
+          if (result.content) {
+            console.log('Content type:', typeof result.content);
+            console.log('Content keys:', Object.keys(result.content || {}));
+            console.log('Full content structure:', JSON.stringify(result.content, null, 2));
+          } else {
+            console.log('No content in result:', result);
+          }
         }
         
         if (books.length > 0) {
@@ -183,10 +189,24 @@ class KindleScraper {
     } catch (error) {
       console.error(`Scraping failed:`, error.response?.data || error.message);
       
+      // Log detailed error information for debugging
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+        console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      }
+      
       // Log job ID if available for Oxylabs support
       if (error.response?.data?.job_id) {
         console.error(`Oxylabs Job ID: ${error.response.data.job_id}`);
         console.error(`Use this Job ID when contacting Oxylabs support about Amazon URL restrictions`);
+      }
+      
+      // Check if credentials are the issue
+      if (error.response?.status === 401) {
+        console.error('❌ Authentication failed - check Oxylabs credentials');
+      } else if (error.response?.status === 400) {
+        console.error('❌ Bad request - check payload format');
       }
       
       console.log(`❌ Oxylabs failed for ${category} - NO FALLBACK TO DEMO DATA`);
