@@ -75,7 +75,13 @@ export default async function handler(req, res) {
     res.json({
       category,
       count: transformedBooks.length,
-      books: transformedBooks
+      books: transformedBooks,
+      dataSource: transformedBooks.length > 0 && transformedBooks[0].amazonUrl?.includes('fallback') 
+        ? 'curated-popular-titles' 
+        : 'live-amazon-scraping',
+      note: transformedBooks.length > 0 && transformedBooks[0].amazonUrl?.includes('fallback')
+        ? `Using curated popular ${category} titles due to Amazon scraping timeout constraints`
+        : 'Live data from Amazon bestsellers page'
     });
   } catch (error) {
     console.error('Scrape books error:', error);

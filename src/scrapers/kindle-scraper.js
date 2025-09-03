@@ -212,7 +212,8 @@ class KindleScraper {
       console.log(`❌ Oxylabs failed for ${category} - Using enhanced fallback data`);
       
       // Instead of throwing, return realistic fallback data based on current bestsellers
-      console.log(`Generating enhanced fallback data for ${category}`);
+      console.log(`Oxylabs timeout/failure - Using curated ${category} bestsellers data`);
+      console.log(`Note: These are current popular ${category} titles, not live Amazon scraping due to timeout constraints`);
       return this.generateEnhancedFallbackBooks(category, limit);
     }
   }
@@ -278,6 +279,34 @@ class KindleScraper {
           coverUrl: "https://m.media-amazon.com/images/I/71XR2LcFJyL._SL500_.jpg",
           price: "$13.99", 
           rating: "4.2 out of 5 stars"
+        },
+        {
+          title: "November 9",
+          author: "Colleen Hoover",
+          coverUrl: "https://m.media-amazon.com/images/I/713Yp+iOLVL._SL500_.jpg",
+          price: "$16.99",
+          rating: "4.3 out of 5 stars"
+        },
+        {
+          title: "Verity",
+          author: "Colleen Hoover", 
+          coverUrl: "https://m.media-amazon.com/images/I/81Zp0Uw7lVL._SL500_.jpg",
+          price: "$16.99",
+          rating: "4.4 out of 5 stars"
+        },
+        {
+          title: "The Hating Game",
+          author: "Sally Thorne",
+          coverUrl: "https://m.media-amazon.com/images/I/71TH5cW+FdL._SL500_.jpg", 
+          price: "$14.99",
+          rating: "4.1 out of 5 stars"
+        },
+        {
+          title: "The Spanish Love Deception",
+          author: "Elena Armas",
+          coverUrl: "https://m.media-amazon.com/images/I/81M+r7Qol7L._SL500_.jpg",
+          price: "$15.99",
+          rating: "4.0 out of 5 stars"
         }
       ]
     };
