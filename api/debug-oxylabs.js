@@ -69,11 +69,22 @@ export default async function handler(req, res) {
             console.log('Content keys:', Object.keys(result.content));
             console.log('Content type:', typeof result.content);
             
+            // Log the results array specifically
+            if (result.content.results) {
+              console.log('Results array length:', result.content.results.length);
+              if (result.content.results.length > 0) {
+                console.log('First result sample:', JSON.stringify(result.content.results[0], null, 2));
+              }
+            }
+            
             // Log a sample of the content
             if (typeof result.content === 'string') {
               console.log('Content sample (first 500 chars):', result.content.substring(0, 500));
             } else {
-              console.log('Content structure:', JSON.stringify(result.content, null, 2));
+              console.log('Content structure (limited):', JSON.stringify({
+                ...result.content,
+                results: result.content.results ? `Array(${result.content.results.length})` : 'none'
+              }, null, 2));
             }
           }
         }
