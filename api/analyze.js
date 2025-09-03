@@ -31,12 +31,20 @@ export default async function handler(req, res) {
     let analyses;
     
     try {
-      // Load and use the real Enhanced Cover Analyzer
+      // Load and use the real Enhanced Cover Analyzer with timeout protection
       const EnhancedCoverAnalyzer = await loadCoverAnalyzer();
       const analyzer = new EnhancedCoverAnalyzer();
       
-      // This will use real image processing and AI analysis
-      analyses = await analyzer.analyzeCovers(books);
+      // Set up a timeout promise (20 seconds to leave buffer for response)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Analysis timeout after 20 seconds')), 20000);
+      });
+      
+      // Race between analysis and timeout
+      analyses = await Promise.race([
+        analyzer.analyzeCovers(books),
+        timeoutPromise
+      ]);
     } catch (analysisError) {
       console.error('Real analysis failed, using fallback:', analysisError.message);
       
